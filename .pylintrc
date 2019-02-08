@@ -1,0 +1,20 @@
+[MESSAGES CONTROL]
+
+# C0103: snake case
+# E1101: pytorch...
+# E1102: pytorch...
+# C0303: trailing white space
+# C0305: trailing new lines
+# C0325: unecessary () after assert
+# C0111: missing class docstring
+# R0902: Too many instance attributes
+# R0913: Too many arguments
+# R0914: Too many local variables
+# C0326: Exactly one space required around keyword argument assignment
+# W0231: super-init not called
+disable=C0103, E1101, E1102, C0303, C0305, C0325, C0111, R0902, R0913, R0914, C0326, W0231
+
+[MASTER]
+extension-pkg-whitelist=torch
+
+
