@@ -3,7 +3,7 @@ Implementation of Cytof model using Variational Inference in Python3 (using PyTo
 
 # References
 
-- [Taking gradients w.r.t. parameters of random variates]
+- Taking gradients w.r.t. parameters of random variates
     - [Pathwise Derivatives Beyond the Reparameterization Trick][1]
     - [PyTorch `rsample`][2]
 - [ADVI][3]
