@@ -6,7 +6,6 @@ from torch.distributions import Normal, Gamma, Dirichlet, Beta
 from torch.nn import Parameter
 # from torch.distributions.kl import kl_divergence as kld
 
-
 # VD: Variational Distribution
 # VP: Variational Parameters
 # VI: Variational Inference
@@ -72,4 +71,28 @@ class VDDirichlet(VD):
 
     def dist(self):
         return Dirichlet(self.vp.exp())
+
+class VI(torch.nn.Module):
+    def __init__(self):
+        # Call parent's init
+        super(VI, self).__init__()
+
+        # Register variational parameters
+        self.params = {}
+        for key in self.__dict__:
+            param = self.__getattribute__(key)
+            if issubclass(type(param), VD):
+                self.__setattr__(key + '_vp', param.vp)
+                self.params[key] = param
+
+    @abc.abstractmethod
+    def forward(self, *args):
+        pass
+
+
+    def sample_params(self):
+        params = {}
+        for key in self.params:
+            params[key] = slef.params[key].rsample()
+        return params
 

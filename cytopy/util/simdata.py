@@ -6,9 +6,6 @@ from torch.distributions import Categorical
 from torch.distributions import Bernoulli
 from torch.distributions import Beta
 from torch.distributions import Normal
-from torch.distributions import Uniform
-from torch.distributions import Gamma
-from torch.distributions.log_normal import LogNormal
 
 # CHECK THIS!
 def simdata(N=[300, 100, 200], J=25, a_W=[200., 500., 200., 100.], L0=5, L1=3, alpha=None):
@@ -37,10 +34,9 @@ def simdata(N=[300, 100, 200], J=25, a_W=[200., 500., 200., 100.], L0=5, L1=3, a
     eta0 = Dirichlet(a_eta0).sample((I, J))
     eta1 = Dirichlet(a_eta1).sample((I, J))
 
-    # mu0 = Uniform(-10, -2).sample((L0, ))
     mu0 = -5 * (torch.arange(L0) + 1).float()
     mu1 = 5 * (torch.arange(L1) + 1).float()
-    sig = torch.ones((I, )) * 1.0 # Gamma(1, 3).sample((I, ))
+    sig = torch.ones((I, )) * 1.0
 
     params = {'W': W, 'v': v, 'eta0': eta0, 'eta1': eta1,
               'mu0': mu0, 'mu1': mu1, 'sig': sig, 'Z': Z}
