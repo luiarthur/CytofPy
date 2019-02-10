@@ -1,7 +1,8 @@
 import torch
 from torch.distributions import Normal, Gamma, Dirichlet, Beta
+from torch.distributions.log_normal import LogNormal
 from torch.distributions.kl import kl_divergence as kld
-from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VI
+from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
 
 def compute_Z(logit, tau):
     """
@@ -32,16 +33,18 @@ def default_priors(y, K:int=30, L=None):
     K = K
 
     return {'I': I, 'J': J, 'N': N, 'L': L, 'K': K,
-            'mu0': Gamma(torch.ones(L[0]), torch.ones(L[0])),
-            'mu1': Gamma(torch.ones(L[1]), torch.ones(L[1])),
             #
-            'sig0': Gamma(torch.ones(L[0]), torch.ones(L[0])),
-            'sig1': Gamma(torch.ones(L[1]), torch.ones(L[1])),
+            'mu0': Gamma(1, 1),
+            'mu1': Gamma(1, 1),
+            #
+            # 'sig': LogNormal(0, 1),
+            'sig0': LogNormal(0, 1),
+            'sig1': LogNormal(0, 1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
             #
-            'alpha': Gamma(.1, .1),
+            'alpha': Gamma(1, 1),
             'H': Normal(0, 1),
             #
             'beta0': Gamma(1, 1),
@@ -49,8 +52,8 @@ def default_priors(y, K:int=30, L=None):
             #
             'W': Dirichlet(torch.ones(K) / K)}
 
-class Global(VI):
-    def __init__(self, priors, iota=0.5, verbose=1):
+class GlobalMod(VI):
+    def __init__(self, priors, iota=1.0, tau=0.1, verbose=1):
         self.verbose = verbose
 
         # Dimensions of data
@@ -61,16 +64,21 @@ class Global(VI):
 
         # Tuning Parameters
         self.iota = iota
+        self.tau = tau
 
         # Dimensions of parameters
         self.L = priors['L']
         self.K = priors['K']
 
+        # Store priors
+        self.priors = priors
+
         # Assign variational distributions
-        self.mu0 = VDGamma((self.L[0]))
-        self.mu1 = VDGamma((self.L[1]))
-        self.sig0 = VDGamma((self.L[0]))
-        self.sig1 = VDGamma((self.L[1]))
+        self.mu0 = VDGamma(self.L[0])
+        self.mu1 = VDGamma(self.L[1])
+        self.sig0 = VDLogNormal(self.L[0])
+        self.sig1 = VDLogNormal(self.L[1])
+        # self.sig = VDLogNormal(self.I)
         self.eta0 = VDDirichlet((self.I, self.J, self.L[0]))
         self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
         self.W = VDDirichlet((self.I, self.K))
@@ -81,9 +89,10 @@ class Global(VI):
         self.H = VDNormal((self.J, self.K))
 
         # This must be done after assigning variational distributions
-        super(Global, self).__init__()
+        super(GlobalMod, self).__init__()
 
     def loglike(self, y, params):
+        ll = 0.0
         for i in range(self.I):
             # Y: Ni x J
             # muz: Lz
@@ -91,11 +100,13 @@ class Global(VI):
 
             # Ni x J x Lz
             d0 = Normal(-self.iota - params['mu0'].cumsum(0)[None, None, :],
-                        params['sig'][i]).log_prob(y[i][:, :, None])
+                        # params['sig'][i]).log_prob(y[i][:, :, None])
+                        params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
 
             d1 = Normal(self.iota + params['mu1'].cumsum(0)[None, None, :],
-                        params['sig'][i]).log_prob(y[i][:, :, None])
+                        # params['sig'][i]).log_prob(y[i][:, :, None])
+                        params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
             
             # Ni x J
@@ -128,16 +139,19 @@ class Global(VI):
     def kl_qp(self, params):
         res = 0.0
 
-        for key in self.param:
-            res += kld(self.params[key].dist(), self.priors[key]).sum()
+        for key in params:
+            if key == 'v':
+                res += kld(self.vd['v'].dist(), Beta(params['alpha'], 1)).sum()
+            elif key == 'beta0' or key == 'beta1':
+                # TODO
+                pass
+            else:
+                # NOTE: self.vd refers to the variational distributions object
+                res += kld(self.vd[key].dist(), self.priors[key]).sum()
 
-        res += kld(self.v.dist(), Beta(params['alpha'], 1)).sum()
+        if self.verbose >= 2:
+            print('kl_qp: {}'.format(res / self.Nsum))
 
         return res / self.Nsum
-
-    def forward(self, y):
-        params = self.sample_params()
-        elbo = self.loglike(y, params) - self.kl_qp(params)
-        return elbo
 
 

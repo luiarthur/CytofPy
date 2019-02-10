@@ -1,2 +1,2 @@
-from .readCB import *
-from .simdata import *
+from .readCB import readCB
+from .simdata import simdata

@@ -1,3 +1,3 @@
-from .Global import *
-from .Local import *
+from .GlobalMod import *
+# from .LocalMod import *
 from .fit import *

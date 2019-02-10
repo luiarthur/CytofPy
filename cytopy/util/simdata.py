@@ -8,7 +8,7 @@ from torch.distributions import Beta
 from torch.distributions import Normal
 
 # CHECK THIS!
-def simdata(N=[300, 100, 200], J=25, a_W=[200., 500., 200., 100.], L0=5, L1=3, alpha=None):
+def simdata(N=[300, 100, 200], J=25, a_W=[200., 500., 200., 100.], L0=5, L1=3, sig=None, alpha=None):
     I = len(N)
     data = {'y': [], 'm': []}
     K = len(a_W)
@@ -34,9 +34,11 @@ def simdata(N=[300, 100, 200], J=25, a_W=[200., 500., 200., 100.], L0=5, L1=3, a
     eta0 = Dirichlet(a_eta0).sample((I, J))
     eta1 = Dirichlet(a_eta1).sample((I, J))
 
-    mu0 = -5 * (torch.arange(L0) + 1).float()
-    mu1 = 5 * (torch.arange(L1) + 1).float()
-    sig = torch.ones((I, )) * 1.0
+    if sig is None:
+        sig = torch.ones((I, )) * 1.0
+
+    mu0 = -(torch.arange(L0) + 3 * sig.max()).float()
+    mu1 = (torch.arange(L1) + 3 * sig.max()).float()
 
     params = {'W': W, 'v': v, 'eta0': eta0, 'eta1': eta1,
               'mu0': mu0, 'mu1': mu1, 'sig': sig, 'Z': Z}
