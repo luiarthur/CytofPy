@@ -1,5 +1,5 @@
 import torch
-from torch.distributions import Normal, Gamma, Dirichlet, Beta
+from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
 from torch.distributions.log_normal import LogNormal
 from torch.distributions.kl import kl_divergence as kld
 from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
@@ -44,11 +44,11 @@ def default_priors(y, K:int=30, L=None):
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
             #
-            'alpha': Gamma(1, 1),
+            'alpha': Gamma(.1, .1),
             'H': Normal(0, 1),
             #
-            'beta0': Gamma(1, 1),
-            'beta1': Gamma(1, 1),
+            'b0': Gamma(1, 1),
+            'b1': Gamma(1, 1),
             #
             'W': Dirichlet(torch.ones(K) / K)}
 
@@ -83,15 +83,19 @@ class GlobalMod(VI):
         self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
         self.W = VDDirichlet((self.I, self.K))
         self.alpha = VDGamma(1)
-        self.beta0 = VDGamma((self.I, self.J))
-        self.beta1 = VDGamma((self.I, self.J))
+        self.b0 = VDGamma((self.I, self.J))
+        self.b1 = VDGamma((self.I, self.J))
         self.v = VDBeta(self.K)
         self.H = VDNormal((self.J, self.K))
 
         # This must be done after assigning variational distributions
         super(GlobalMod, self).__init__()
 
-    def loglike(self, y, params):
+    def loglike(self, data, params):
+        y = data['y']
+        m = data['m']
+        isLocal = data['isLocal']
+
         ll = 0.0
         for i in range(self.I):
             # Y: Ni x J
@@ -103,11 +107,15 @@ class GlobalMod(VI):
                         # params['sig'][i]).log_prob(y[i][:, :, None])
                         params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
+            if isLocal:
+                d0 *= m[i][:, :, None]
 
             d1 = Normal(self.iota + params['mu1'].cumsum(0)[None, None, :],
                         # params['sig'][i]).log_prob(y[i][:, :, None])
                         params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
+            if isLocal:
+                d1 *= m[i][:, :, None]
             
             # Ni x J
             logmix_L0 = torch.logsumexp(d0, 2)
@@ -127,6 +135,10 @@ class GlobalMod(VI):
 
             f = d + params['W'][i:i+1, :].log()
             lli = torch.logsumexp(f, 1).mean(0) * (self.N[i] / self.Nsum)
+
+            logit_pi = -params['b0'][i:i+1, :] - params['b1'][i:i+1, :] * y[i]
+            lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum()
+
             assert(lli.dim() == 0)
 
             ll += lli
@@ -142,9 +154,6 @@ class GlobalMod(VI):
         for key in params:
             if key == 'v':
                 res += kld(self.vd['v'].dist(), Beta(params['alpha'], 1)).sum()
-            elif key == 'beta0' or key == 'beta1':
-                # TODO
-                pass
             else:
                 # NOTE: self.vd refers to the variational distributions object
                 res += kld(self.vd[key].dist(), self.priors[key]).sum()

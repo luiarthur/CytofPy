@@ -1,52 +1,65 @@
-import torch
 import copy
-from torch.distributions import Normal, Gamma, Dirichlet, Beta
-from torch.distributions.kl import kl_divergence as kld
-from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VI
 
+import torch
+from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
+from torch.distributions.log_normal import LogNormal
+from torch.distributions.kl import kl_divergence as kld
 from torch.nn import Parameter
 
-def default_dims(data, K:int=30, L=None):
-    pass
+from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
 
-def default_priors(dims):
-    pass
 
 class LocalMod(VI):
-    def __init__(self, y, y_init_mean):
-        self.y_imp = copy.deepcopy(y)
-        self.m = []
+    def __init__(self, y, y_mean_init, y_sd_init):
         self.I = len(y)
         self.N = [yi.size(0) for yi in y]
         self.J = y[0].size(1)
+
+        self.m = [torch.isnan(yi) for yi in y]
+        self.y = [VDNormal(y[i].shape) for i in range(self.I)]
         
         for i in range(self.I):
-            m[i] = torch.isnan(y[i])
-            # Check this
-            self.y_imp_mean[i][m[i]] = Parameter(torch.randn(m[i].sum()) * y_init_mean)
-            self.y_imp_log_s[i][m[i]] = Parameter(torch.zeros(m[i].sum()) - 2)
+            # Set means for observed y to observed y
+            self.y[i].vp[0].data = y[i].data + 0.0
+            # Set means for missing y to y_mean_iniy
+            self.y[i].vp[0][self.m[i]] = y_mean_init
+
+            # Set sd for observed y to 0
+            self.y[i].vp[1].data = torch.tensor(float('-inf'))
+            # Set sd for missing y to y_sd_init
+            self.y[i].vp[1][self.m[i]] = torch.log(torch.tensor(y_sd_init))
 
         # This must be done after assigning variational distributions
-        super(Local, self).__init__()
+        super(LocalMod, self).__init__()
 
+    def loglike(self, g_params, y):
+        out = 0.0
+        for i in range(self.I):
+            logits = -g_params['b0'][i:i+1, :].detach() - g_params['b1'][i:i+1, :].detach() * y[i]
+            out += Bernoulli(logits=logits[self.m[i]]).log_prob(1.0).sum()
+        return out
 
-    def loglike(self, data, params):
-        pass
+    def kl_qp(self, g_params, y):
+        # TODO: detach all parameters
+        gmod = g_params['gmod']
 
+        out = 0.0
+        for i in range(self.I):
+            log_p = gmod.loglike(y, g_params)
 
-    def kl_qp(self, params):
-        pass
+            vp_m = self.y[i].vp[0][m[i]]
+            vp_s = self.y[i].vp[1][m[i]].exp()
+            log_q = Normal(vp_m, vp_s).log_prob(y[i][m[i]]).sum()
 
-    # def forward(self, params, idx):
-    #     mini_y = [self.y_imp[i][idx[i], :] for i in range(self.I)]
-    #     mini_m = [self.m[i][idx[i], :] for i in range(self.I)]
+            out += log_p - log_q
 
-    #     # TODO
-    #     for i in range(self.I):
-    #         m = self.y_imp_mean[i][m[i]]
-    #         s = self.y_imp_log_s[i][m[i]].exp()
-    #         mini_y[i][mini_m[i]] = Normal(m, s).rsample()
-    #     
-    #     elbo = log_joint(mini_y, mini_m, params) - log_q(mini_y, mini_m)
-    #     return elbo
+        return out
 
+    def forward(self, g_params):
+        y = self.sample_params()
+        elbo = self.loglike(g_params, y) - self.kl_qp(g_params, y)
+        return elbo
+
+    def sample_params(self):
+        return [yi.rsample() for yi in self.y]
+        

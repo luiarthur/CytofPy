@@ -115,7 +115,7 @@ class VI(torch.nn.Module):
  
     def forward(self, data):
         params = self.sample_params()
-        elbo = self.loglike(data['y'], params) - self.kl_qp(params)
+        elbo = self.loglike(data, params) - self.kl_qp(params)
         return elbo
 
     def sample_params(self):
