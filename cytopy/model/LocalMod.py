@@ -7,7 +7,7 @@ from torch.distributions.kl import kl_divergence as kld
 from torch.nn import Parameter
 from cytopy.model.GlobalMod import compute_Z
 
-from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
+from cytopy.model.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
 
 
 class LocalMod(VI):

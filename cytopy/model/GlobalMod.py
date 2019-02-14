@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
 from torch.distributions.log_normal import LogNormal
 from torch.distributions.kl import kl_divergence as kld
-from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
+from cytopy.model.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
 
 def compute_Z(logit, tau):
     """
