@@ -4,6 +4,7 @@ import numpy as np
 from .GlobalMod import GlobalMod
 from .LocalMod import LocalMod
 import copy
+import sys
 
 def update(opt, mod, dat):
     elbo = mod(dat)
@@ -16,7 +17,7 @@ def update(opt, mod, dat):
 def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr_g=1e-1, lr_l=1e-1,
         print_freq=10, seed=1, y_mean_init=-3.0, y_sd_init=0.5,
         trace_g_every=None, trace_l_every=None, eps=1e-6, tau=0.1,
-        verbose=1):
+        verbose=1, flush=True):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -87,6 +88,9 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr_g=1e-1, lr_l=1e-1,
         if t > 10 and abs(g_elbo_hist[-1] / g_elbo_hist[-2] - 1) < eps:
             print('Convergence suspected! Ending optimizer early.')
             break
+
+        if flush:
+            sys.stdout.flush()
 
     return {'g_elbo': g_elbo_hist,
             'g_model': best_g_model,
