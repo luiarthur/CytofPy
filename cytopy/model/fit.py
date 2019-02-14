@@ -1,4 +1,5 @@
 import torch
+import datetime
 import numpy as np
 from .GlobalMod import GlobalMod
 from .LocalMod import LocalMod
@@ -76,8 +77,8 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr_g=1e-1, lr_l=1e-1,
         l_elbo_hist.append(l_elbo.item())
 
         if t % print_freq == 0:
-            print('iteration: {} / {} | g_elbo: {} | l_elbo: {}'.format(t,
-                max_iter, g_elbo_hist[-1], l_elbo_hist[-1]))
+            print('{} | iteration: {} / {} | g_elbo: {} | l_elbo: {}'.format(
+                datetime.datetime.now(), t, max_iter, g_elbo_hist[-1], l_elbo_hist[-1]))
 
         if t % trace_g_every == 0: # and not repaired_grads:
             best_g_model = copy.deepcopy(g_model)
