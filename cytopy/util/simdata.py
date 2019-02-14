@@ -75,3 +75,12 @@ def simdata(N=[300, 100, 200], J=25, a_W=[200., 500., 200., 100.], L0=5, L1=3, s
     return {'data': data, 'params': params}
 
 # data = simdata()
+
+def simdata_with_missing_values(N=[300, 100, 200], J=25,
+                                a_W=[200., 500., 200., 100.],
+                                L0=5, L1=3, sig=None, alpha=None):
+    data = simdata(N=N, J=J, a_W=a_W, L0=L0, L1=L1, sig=sig, alpha=alpha)
+
+    I = len(data['y'])
+    for i in range(I):
+        pass

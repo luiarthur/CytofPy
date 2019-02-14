@@ -22,6 +22,7 @@ def add_gridlines_Z(Z):
 if __name__ == '__main__':
     path_to_exp_results = 'results/test/'
     os.makedirs(path_to_exp_results, exist_ok=True)
+    path_to_cb_data = 'data/cb.txt'
 
     show_plots = True
 
@@ -30,14 +31,8 @@ if __name__ == '__main__':
     np.random.seed(0)
 
     # Success
-    # data = cytopy.util.simdata(N=[30000, 10000, 20000], L0=1, L1=1, J=4, a_W=[300, 700])
-    # data = cytopy.util.simdata(N=[30000, 10000, 20000], L0=3, L1=3, J=4, a_W=[300, 700])
-
-    # TODO: Make this work
-    data = cytopy.util.simdata(N=[30000, 10000, 20000], L0=3, L1=3, J=8)
-
-    cb = data['data']
-    y = copy.deepcopy(cb['y'])
+    data = cytopy.util.readCB(path_to_cb_data)
+    y = copy.deepcopy(data['y'])
     I = len(y)
 
     # Color map
@@ -47,14 +42,7 @@ if __name__ == '__main__':
     cm.set_over(color='red')
     cm.set_bad(color='black')
 
-
     if show_plots:
-        plt.imshow(data['params']['Z'], aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
-        J, K = data['params']['Z'].shape
-        add_gridlines_Z(data['params']['Z'])
-        plt.savefig('{}/Z_true.pdf'.format(path_to_exp_results))
-        plt.show()
-
         # Plot yi histograms
         plt.hist(y[0][:, 1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
         plt.hist(y[1][:, 3], bins=100, density=True); plt.xlim(-15, 15); plt.show()

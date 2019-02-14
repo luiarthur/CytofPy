@@ -53,7 +53,7 @@ def default_priors(y, K:int=30, L=None):
             'W': Dirichlet(torch.ones(K) / K)}
 
 class GlobalMod(VI):
-    def __init__(self, priors, iota=1.0, tau=0.1, verbose=1):
+    def __init__(self, priors, tau=0.1, verbose=1):
         self.verbose = verbose
 
         # Dimensions of data
@@ -63,7 +63,6 @@ class GlobalMod(VI):
         self.Nsum = sum(self.N)
 
         # Tuning Parameters
-        self.iota = iota
         self.tau = tau
 
         # Dimensions of parameters
@@ -94,7 +93,6 @@ class GlobalMod(VI):
     def loglike(self, data, params):
         y = data['y']
         m = data['m']
-        isLocal = data['isLocal']
 
         ll = 0.0
         for i in range(self.I):
@@ -103,19 +101,15 @@ class GlobalMod(VI):
             # etaz_i: 1 x J x Lz
 
             # Ni x J x Lz
-            d0 = Normal(-self.iota - params['mu0'].cumsum(0)[None, None, :],
+            d0 = Normal(-params['mu0'].cumsum(0)[None, None, :],
                         # params['sig'][i]).log_prob(y[i][:, :, None])
                         params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
-            if isLocal:
-                d0 *= m[i][:, :, None]
 
-            d1 = Normal(self.iota + params['mu1'].cumsum(0)[None, None, :],
+            d1 = Normal(params['mu1'].cumsum(0)[None, None, :],
                         # params['sig'][i]).log_prob(y[i][:, :, None])
                         params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
-            if isLocal:
-                d1 *= m[i][:, :, None]
             
             # Ni x J
             logmix_L0 = torch.logsumexp(d0, 2)
@@ -133,15 +127,17 @@ class GlobalMod(VI):
             c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
             d = c.sum(1)
 
+            fac = self.N[i] / self.Nsum 
+
             f = d + params['W'][i:i+1, :].log()
-            lli = torch.logsumexp(f, 1).mean(0) * (self.N[i] / self.Nsum)
+            lli = torch.logsumexp(f, 1).mean(0)
 
             logit_pi = -params['b0'][i:i+1, :] - params['b1'][i:i+1, :] * y[i]
-            lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum()
+            lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum(1).mean(0)
 
             assert(lli.dim() == 0)
 
-            ll += lli
+            ll += lli * fac
 
         if self.verbose >= 2:
             print('log_like: {}'.format(ll))

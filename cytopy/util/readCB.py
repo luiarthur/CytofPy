@@ -1,3 +1,5 @@
+import torch
+
 def readCB(cb_filepath:str):
     with open(cb_filepath, 'r') as f:
         # Read number of cells in first line
@@ -13,12 +15,14 @@ def readCB(cb_filepath:str):
 
         # Read data into separate samples
         y = []
+        m = []
         for i in range(I):
             yi = []
             for _ in range(N[i]):
                 line = f.readline().split()
                 line = [float(obs.replace('NA', 'nan')) for obs in line]
                 yi.append(line)
-            y.append(yi)
+            y.append(torch.tensor(yi))
+            m.append(torch.isnan(y[i]))
 
-    return {'N': N, 'markers': markers, 'y': y}
+    return {'N': N, 'markers': markers, 'y': y, 'm': m}

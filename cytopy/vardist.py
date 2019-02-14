@@ -53,9 +53,12 @@ class VDLogNormal(VD):
 
 
 class VDNormal(VD):
-    def __init__(self, size):
-        m = torch.randn(size)
-        log_s = torch.randn(size)
+    def __init__(self, size, m=None, log_s=None):
+        if m is None:
+            m = torch.randn(size)
+
+        if log_s is None:
+            log_s = torch.randn(size)
 
         self.vp = Parameter(torch.stack([m, log_s]), requires_grad=True)
         self.size = size

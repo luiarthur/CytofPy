@@ -5,59 +5,89 @@ from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
 from torch.distributions.log_normal import LogNormal
 from torch.distributions.kl import kl_divergence as kld
 from torch.nn import Parameter
+from cytopy.model.GlobalMod import compute_Z
 
 from cytopy.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
 
 
 class LocalMod(VI):
-    def __init__(self, y, y_mean_init, y_sd_init):
+    def __init__(self, y, y_mean_init, y_sd_init, tau=0.1):
         self.I = len(y)
         self.N = [yi.size(0) for yi in y]
         self.J = y[0].size(1)
+        self.tau = tau
 
         self.m = [torch.isnan(yi) for yi in y]
-        self.y = [VDNormal(y[i].shape) for i in range(self.I)]
+
+        y_m_init = [yi.data for yi in y]
+        y_log_s_init = [torch.ones(y[i].shape) * float('-inf') for i in range(self.I)]
         
         for i in range(self.I):
-            # Set means for observed y to observed y
-            self.y[i].vp[0].data = y[i].data + 0.0
             # Set means for missing y to y_mean_iniy
-            self.y[i].vp[0][self.m[i]] = y_mean_init
+            y_m_init[i][self.m[i]] = y_mean_init
 
-            # Set sd for observed y to 0
-            self.y[i].vp[1].data = torch.tensor(float('-inf'))
             # Set sd for missing y to y_sd_init
-            self.y[i].vp[1][self.m[i]] = torch.log(torch.tensor(y_sd_init))
+            y_log_s_init[i][self.m[i]] = torch.log(torch.tensor(y_sd_init))
+
+        self.y = [VDNormal(y[i].shape, y_m_init[i], y_log_s_init[i]) for i in range(self.I)]
 
         # This must be done after assigning variational distributions
         super(LocalMod, self).__init__()
 
-    def loglike(self, g_params, y):
-        out = 0.0
+    # TODO: divide by a constant for larger learning rate?
+    def loglike(self, theta, y):
+        ll = 0.0
+        idx = theta['idx']
+
         for i in range(self.I):
-            logits = -g_params['b0'][i:i+1, :].detach() - g_params['b1'][i:i+1, :].detach() * y[i]
-            out += Bernoulli(logits=logits[self.m[i]]).log_prob(1.0).sum()
-        return out
+            mi = self.m[i][idx[i], :]
+            yi = y[i][idx[i], :]
+            logits = -theta['b0'][i:i+1, :].detach() - theta['b1'][i:i+1, :].detach() * yi
+            ll += Bernoulli(logits=logits[mi]).log_prob(1.0).sum()
 
-    def kl_qp(self, g_params, y):
-        # TODO: detach all parameters
-        gmod = g_params['gmod']
+        return ll
 
-        out = 0.0
+    def kl_qp(self, theta, y):
+        idx = theta['idx']
+
+        log_p = 0.0
+        log_q = 0.0
+
         for i in range(self.I):
-            log_p = gmod.loglike(y, g_params)
+            # log_p
+            mi = self.m[i][idx[i], :]
+            yi = y[i][idx[i], :]
+            d0 = Normal(-theta['mu0'].cumsum(0)[None, None, :],
+                        theta['sig0'][None, None, :]).log_prob(yi[:, :, None])
+            d0 += theta['eta0'][i:i+1, :, :].log()
+            d0 *= mi[:, :, None].float()
 
-            vp_m = self.y[i].vp[0][m[i]]
-            vp_s = self.y[i].vp[1][m[i]].exp()
-            log_q = Normal(vp_m, vp_s).log_prob(y[i][m[i]]).sum()
+            d1 = Normal(theta['mu1'].cumsum(0)[None, None, :],
+                        theta['sig1'][None, None, :]).log_prob(yi[:, :, None])
+            d1 += theta['eta1'][i:i+1, :, :].log()
+            d1 *= mi[:, :, None].float()
+            
+            logmix_L0 = torch.logsumexp(d0, 2)
+            logmix_L1 = torch.logsumexp(d1, 2)
 
-            out += log_p - log_q
+            b_vec = theta['v'].cumprod(0)
+            Z = compute_Z(b_vec[None, :] - Normal(0, 1).cdf(theta['H']), self.tau)
+            c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
+            d = c.sum(1)
 
-        return out
+            f = d + theta['W'][i:i+1, :].log()
+            log_p += torch.logsumexp(f, 1).sum(0)
 
-    def forward(self, g_params):
+            # log_q
+            vp_m = self.y[i].vp[0][idx[i], :][mi]
+            vp_s = self.y[i].vp[1][idx[i], :][mi].exp()
+            log_q += Normal(vp_m, vp_s).log_prob(yi[mi]).sum()
+
+        return log_p - log_q
+
+    def forward(self, theta):
         y = self.sample_params()
-        elbo = self.loglike(g_params, y) - self.kl_qp(g_params, y)
+        elbo = self.loglike(theta, y) - self.kl_qp(theta, y)
         return elbo
 
     def sample_params(self):
