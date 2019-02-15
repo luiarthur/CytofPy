@@ -15,11 +15,17 @@ def update(opt, mod, data):
     idx = data['idx']
     # For observed y's, set gradients of variational parameters to 0.
     for i in range(mod.I):
+        # NOTE: This works, but it's slow.
+        # mi = mod.m[i]
+        # y_vp_i = mod.y_vp[i]
+        # y_vp_i.grad[0][1 - mi] = 0
+        # y_vp_i.grad[1][1 - mi] = 0
+        # FIXME: Cheaper, but still updates observed values?!
         idx_i = idx[i]
         mi = mod.m[i][idx_i, :]
+        mi = torch.stack([mi, mi])
         y_vp_i = mod.y_vp[i]
-        y_vp_i.grad[0, idx_i, :][1 - mi] = 0
-        y_vp_i.grad[1, idx_i, :][1 - mi] = 0
+        y_vp_i.grad[:, idx_i, :][1 - mi] = 0
 
     opt.step()
     return elbo

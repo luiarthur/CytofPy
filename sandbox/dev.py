@@ -28,10 +28,12 @@ x.grad
 
 # Test
 # https://discuss.pytorch.org/t/requires-gradient-on-only-part-of-a-matrix/5680
-x = torch.randn(3,5, requires_grad=True)
-loss = (torch.zeros(3,5) - x * 2.0).abs().sum()
+x = torch.randn(2, 3,5, requires_grad=True)
+loss = (torch.zeros(2, 3,5) - x * 2.0).abs().sum()
 loss.backward()
-x.grad[2, 2] = 0.0
+m = x > 0
+x.grad
+x.grad[:,1:2,:][m[:,1:2,:]] = 0
 x.grad
 
 # Test
@@ -40,3 +42,5 @@ x = torch.randn(3,5, requires_grad=True)
 loss = (torch.zeros(3,5) - x[1] * 2.0).abs().sum()
 loss.backward()
 x.grad
+
+
