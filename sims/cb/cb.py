@@ -50,28 +50,31 @@ if __name__ == '__main__':
         plt.hist(y[1][:, 3], bins=100, density=True); plt.xlim(-15, 15); plt.show()
         plt.hist(y[2][:, -1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
 
-        # Heatmaps
-        for i in range(I):
-            plt.imshow(y[i], aspect='auto', vmin=-2, vmax=2, cmap=cm)
-            plt.colorbar()
+    # Heatmaps
+    for i in range(I):
+        plt.imshow(y[i], aspect='auto', vmin=-2, vmax=2, cmap=cm)
+        plt.colorbar()
+        plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i))
+        if show_plots:
             plt.show()
 
-    K = 10
+    K = 30
     L = [2, 2]
 
     # model.debug=True
     priors = cytopy.model.default_priors(y, K=K, L=L)
-    out = cytopy.model.fit(y, max_iter=5000, lr_g=1e-1, lr_l=1e-2, print_freq=10, eps=1e-6,
+    out = cytopy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=100, tau=0.1,
+                           trace_every=0, save_every=10,
                            verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
-    elbo = out['g_elbo']
+    elbo = out['elbo']
 
     if show_plots:
         out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
-        gmod = out['g_model']
+        mod = out['model']
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
@@ -79,11 +82,12 @@ if __name__ == '__main__':
 
         # Posterior Inference
         B = 100
-        post = [gmod.sample_params() for b in range(B)]
+        idx = [np.random.choice(mod.N[i], 100) for i in range(mod.I)]
+        post = [mod.sample_params(idx) for b in range(B)]
 
         # Plot Z
-        H = torch.stack([p['H'] for p in post]).detach().reshape((B, gmod.J, gmod.K))
-        v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, gmod.K))
+        H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
+        v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
         Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
         plt.imshow(Z.mean(0) > .5, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
@@ -106,23 +110,35 @@ if __name__ == '__main__':
 
         # Plot W, v
         plt.figure()
-        for i in range(gmod.I):
-            plt.subplot(gmod.I + 1, 1, i + 1)
+        for i in range(mod.I):
+            plt.subplot(mod.I + 1, 1, i + 1)
             plt.boxplot(W[:, i, :], showmeans=True, whis=[2.5, 97.5], showfliers=False)
             plt.ylabel('$W_{}$'.format(i+1), rotation=0, labelpad=15)
             for yint in data['params']['W'][i, :].tolist():
                 plt.axhline(yint)
 
-        plt.subplot(gmod.I + 1, 1, gmod.I + 1)
+        plt.subplot(mod.I + 1, 1, mod.I + 1)
         plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.ylabel('$v$', rotation=0, labelpad=15)
         plt.tight_layout()
         plt.show()
 
+        
+        # TODO: Plot b0, b1
+        b0 = torch.stack([p['b0'] for p in post]).detach().numpy()
+        b1 = torch.stack([p['b1'] for p in post]).detach().numpy()
+
+        def pmiss(b0, b1, ygrid, i, j):
+            z = -b0[:, i, j, None] - b1[:, i, j, None] * ygrid[None, :]
+            return 1 / (1 + np.exp(-z))
+
+        ygrid = np.arange(-8,8,.1)
+        pm = pmiss(b0, b1, ygrid, i=0, j=1)
+        plt.plot(ygrid, pm.mean(0)); plt.show()
 
         # Trace plots of variational parameters
-        W_trace = torch.stack([t['W'].dist().mean for t in out['trace_g']]).detach().numpy()
-        v_trace = torch.stack([t['v'].dist().mean for t in out['trace_g']]).detach().numpy()
+        W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()
+        v_trace = torch.stack([t['v'].dist().mean for t in out['trace']]).detach().numpy()
 
         # Trace for v
         plt.plot(v_trace)
@@ -130,10 +146,10 @@ if __name__ == '__main__':
         plt.show()
 
         # Plot sig mean trace
-        # sig0_m_trace = torch.stack([t['sig0'].dist().mean for t in out['trace_g']])
+        # sig0_m_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
         # plt.plot(sig0_m_trace.detach().numpy())
 
-        # for i in range(gmod.I):
+        # for i in range(mod.I):
         #     plt.axhline(data['params']['sig'][i])
 
         # plt.title('trace plot for $\sigma$_0 vp mean')

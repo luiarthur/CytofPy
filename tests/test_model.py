@@ -33,9 +33,9 @@ class Test_ModelRuns(unittest.TestCase):
 
         # model.debug=True
         priors = cytopy.model.default_priors(y, K=K, L=L)
-        out = cytopy.model.fit(y, max_iter=10, lr_g=1e-1, lr_l=1e-2,
-                               print_freq=1, eps=1e-6, priors=priors, minibatch_size=100,
-                               tau=0.1, verbose=0, seed=1)
+        out = cytopy.model.fit(y, max_iter=20, lr=1e-1, print_freq=1, eps=1e-6,
+                               priors=priors, minibatch_size=100, tau=0.1,
+                               verbose=0, seed=1)
 
         # Save output
         with open('{}/out.p'.format(path_to_exp_results), 'wb') as f:
