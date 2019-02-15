@@ -33,7 +33,9 @@ loss = (torch.zeros(2, 3,5) - x * 2.0).abs().sum()
 loss.backward()
 m = x > 0
 x.grad
-x.grad[:,1:2,:][m[:,1:2,:]] = 0
+x.grad.data[:,1:2,:][m[:,1:2,:]] = 0
+x.grad
+x.grad.data[m[:,1:2,:]] = 0
 x.grad
 
 # Test

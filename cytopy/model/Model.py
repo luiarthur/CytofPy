@@ -198,8 +198,8 @@ class Model(VI):
             elif key == 'y':
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :]
-                    y_vp_m = self.y[i].vp[0][idx[i], :][mi]
-                    y_vp_s = self.y[i].vp[1][idx[i], :][mi].exp()
+                    y_vp_m = self.y_vp[i][0, idx[i], :][mi]
+                    y_vp_s = self.y_vp[i][1, idx[i], :][mi].exp()
                     yi = params['y'][i]
                     res -= Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).sum()
             else:
@@ -217,8 +217,12 @@ class Model(VI):
             if key == 'y':
                 params['y'] = []
                 for i in range(self.I):
+                    mi = self.m[i][idx[i], :].float()
                     yi_vp = self.y_vp[i][:, idx[i], :]
                     yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
+                    # NOTE: A trick to prevent computation of gradients for
+                    #       observed values
+                    yi = yi * mi + yi.detach() * (1 - mi)
                     params['y'].append(yi)
             else:
                 params[key] = self.vd[key].rsample()
