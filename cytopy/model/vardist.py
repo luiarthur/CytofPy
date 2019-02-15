@@ -33,7 +33,7 @@ class VDGamma(VD):
         log_conc = torch.randn(size)
         log_rate = torch.randn(size)
 
-        self.vp = Parameter(torch.stack([log_conc, log_rate]), requires_grad=True)
+        self.vp = Parameter(torch.stack([log_conc, log_rate]))
         self.size = size
 
     def dist(self):
@@ -45,7 +45,7 @@ class VDLogNormal(VD):
         m = torch.randn(size)
         log_s = torch.randn(size)
 
-        self.vp = Parameter(torch.stack([m, log_s]), requires_grad=True)
+        self.vp = Parameter(torch.stack([m, log_s]))
         self.size = size
 
     def dist(self):
@@ -60,7 +60,7 @@ class VDNormal(VD):
         if log_s is None:
             log_s = torch.randn(size)
 
-        self.vp = Parameter(torch.stack([m, log_s]), requires_grad=True)
+        self.vp = Parameter(torch.stack([m, log_s]))
         self.size = size
 
     def dist(self):
@@ -79,7 +79,7 @@ class VDBeta(VD):
         else:
             log_b = torch.zeros(size) + log_b_init
 
-        self.vp = Parameter(torch.stack([log_a, log_b]), requires_grad=True)
+        self.vp = Parameter(torch.stack([log_a, log_b]))
         self.size = size
 
     def dist(self):
@@ -89,7 +89,7 @@ class VDDirichlet(VD):
     def __init__(self, size):
         log_conc = torch.randn(size)
 
-        self.vp = Parameter(log_conc, requires_grad=True)
+        self.vp = Parameter(log_conc)
         self.size = size
 
     def dist(self):

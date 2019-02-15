@@ -24,8 +24,7 @@ def update(opt, mod, data):
         idx_i = idx[i]
         mi = mod.m[i][idx_i, :]
         mi = torch.stack([mi, mi])
-        y_vp_i = mod.y_vp[i]
-        y_vp_i.grad[:, idx_i, :][1 - mi] = 0
+        mod.y_vp[i].grad[:, idx_i, :][1 - mi] = 0
 
     opt.step()
     return elbo
