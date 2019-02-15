@@ -95,6 +95,24 @@ if __name__ == '__main__':
         plt.show()
 
 
+        # Plot mu
+        mu0 = -torch.stack([p['delta0'] for p in post]).detach().cumsum(1).numpy()
+        mu1 = torch.stack([p['delta1'] for p in post]).detach().cumsum(1).numpy()
+        mu = np.concatenate([mu0[:, ::-1], mu1], axis=1)
+        plt.boxplot(mu, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.ylabel('$\mu$', rotation=0, labelpad=15)
+        plt.axhline(0)
+        plt.axvline(mu0.shape[1] + .5)
+        plt.show()
+
+        # y0
+        # FIXME: the observed y's are being changed!
+        y0 = torch.stack([mod.y[0].rsample() for b in range(10)])
+        y0.mean(0)
+        y[0]
+
+        # TODO: check sig0, sig1
+
         # Plot sig
         # sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
         # plt.boxplot(sig0, showmeans=True, whis=[2.5, 97.5], showfliers=False)
@@ -114,8 +132,6 @@ if __name__ == '__main__':
             plt.subplot(mod.I + 1, 1, i + 1)
             plt.boxplot(W[:, i, :], showmeans=True, whis=[2.5, 97.5], showfliers=False)
             plt.ylabel('$W_{}$'.format(i+1), rotation=0, labelpad=15)
-            for yint in data['params']['W'][i, :].tolist():
-                plt.axhline(yint)
 
         plt.subplot(mod.I + 1, 1, mod.I + 1)
         plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
@@ -123,7 +139,7 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.show()
 
-        
+
         # TODO: Plot b0, b1
         b0 = torch.stack([p['b0'] for p in post]).detach().numpy()
         b1 = torch.stack([p['b1'] for p in post]).detach().numpy()
