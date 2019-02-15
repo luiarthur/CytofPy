@@ -1,4 +1,5 @@
 import torch
+import math
 import datetime
 import numpy as np
 from .Model import Model, default_priors
@@ -46,6 +47,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     elbo_hist = []
     trace = []
 
+    elbo_good = True
     for t in range(max_iter):
         idx = []
         for i in range(model.I):
@@ -60,7 +62,11 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
             print('{} | iteration: {}/{} | elbo: {}'.format(
                 datetime.datetime.now(), t, max_iter, elbo_hist[-1]))
 
-        if save_every > 0 and t % save_every == 0:
+        if t > 10 and math.isnan(elbo_hist[-1]):
+            print('nan in elbo. Exiting early.')
+            break
+
+        if save_every > 0 and t % save_every == 0 and elbo_good:
             best_model = copy.deepcopy(model)
 
         if trace_every > 0 and t % trace_every == 0: # and not repaired_grads:
