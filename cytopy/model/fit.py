@@ -40,9 +40,13 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
 
     elbo_good = True
     for t in range(max_iter):
+        # DEBUG
+        # if model.Nsum > 10000:
+        #     print(model.y_vp[2][:, 4264, :])
+
         idx = []
         for i in range(model.I):
-            idx_i = np.random.choice(model.N[i], minibatch_size)
+            idx_i = np.random.choice(model.N[i], minibatch_size, replace=False)
             idx.append(idx_i)
 
         # Update Model parameters
@@ -56,13 +60,6 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         if t > 10 and math.isnan(elbo_hist[-1]):
             print('nan in elbo. Exiting early.')
             break
-            # print('mending nan in parameters')
-            # for p in model.parameters():
-            #     with torch.no_grad():
-            #         idx_grad_is_nan = torch.isnan(p.grad)
-            #         if idx_grad_is_nan.sum() > 0:
-            #             p.grad[idx_grad_is_nan].fill_(0)
-            # TODO: use previous best ests
 
         if save_every > 0 and t % save_every == 0 and elbo_good:
             best_model = copy.deepcopy(model)
@@ -77,6 +74,8 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         if flush:
             sys.stdout.flush()
 
+    # FIXME: don't return last when done with debugging
+    # return {'elbo': elbo_hist, 'model': best_model, 'trace': trace, 'last': model}
     return {'elbo': elbo_hist, 'model': best_model, 'trace': trace}
 
 

@@ -167,6 +167,7 @@ class Model(VI):
 
         # Register m
         self.m = [torch.isnan(yi) for yi in y]
+        self.msum = [mi.sum() for mi in self.m]
 
         # Record the variational distribution for y
         self.y = initialize_y_vd(y=y, m=m, mean_init=y_mean_init, sd_init=y_sd_init)
@@ -215,18 +216,10 @@ class Model(VI):
             c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
             d = c.sum(1)
 
-            fac1 = self.N[i] / self.Nsum 
-            fac2 = self.m[i].sum() / self.Nsum
-
             f = d + params['W'][i:i+1, :].log()
-            lli = torch.logsumexp(f, 1).mean(0) * fac1
 
-            logit_pi = prob_miss_logit(y[i],
-                                       self.b0[i:i+1, :],
-                                       self.b1[i:i+1, :],
-                                       self.b2[i:i+1, :])
-            # lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum(1).mean(0)
-            lli += (m[i].float() * logit_pi.sigmoid().log()).mean() * fac2
+            fac = self.N[i] / self.Nsum 
+            lli = torch.logsumexp(f, 1).mean(0) * fac
 
             assert(lli.dim() == 0)
 
@@ -246,17 +239,37 @@ class Model(VI):
             elif key == 'y':
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :]
-                    y_vp_m = self.y_vp[i][0, idx[i], :][mi]
-                    y_vp_s = self.y_vp[i][1, idx[i], :][mi].exp()
-                    yi = params['y'][i]
-                    res -= Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).sum()
+                    mi_sum = mi.sum()
+
+                    fac = self.msum[i] 
+                    if mi_sum > 0:
+                        y_vp_m = self.y_vp[i][0, idx[i], :][mi]
+                        y_vp_s = self.y_vp[i][1, idx[i], :][mi].exp()
+                        yi = params['y'][i]
+
+                        # DEBUG
+                        # nan_idx = torch.isnan(yi)
+                        # if nan_idx.sum() > 0:
+                        #     nj = nan_idx.nonzero()
+                        #     print('i: {} | (n,j): {}'.format(i, nan_idx.nonzero()))
+
+                        logit_pi = prob_miss_logit(yi,
+                                                   self.b0[i:i+1, :],
+                                                   self.b1[i:i+1, :],
+                                                   self.b2[i:i+1, :])
+
+                        lp = (mi.float() * logit_pi.sigmoid().log()).mean()
+                        lq = Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).mean()
+                        res += (lq - lp) * fac
             else:
                 # NOTE: self.vd refers to the variational distributions object
                 res += kld(self.vd[key].dist(), self.priors[key]).sum()
 
-            if torch.isnan(res).sum() > 0:
-                print('nan for key: {}'.format(key))
-                print(params[key])
+            # DEBUG
+            # if torch.isnan(res).sum() > 0:
+            #     print('nan for key: {}'.format(key))
+            #     print('mi.sum(): {}'.format(mi.sum()))
+            #     print(params[key])
 
         if self.verbose >= 2:
             print('kl_qp: {}'.format(res / self.Nsum))
@@ -274,7 +287,7 @@ class Model(VI):
                     yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
                     # NOTE: A trick to prevent computation of gradients for
                     #       observed values
-                    yi = yi * mi + yi.detach() * (1 - mi)
+                    yi = mi * yi + (1 - mi) * yi.detach()
                     params['y'].append(yi)
             else:
                 params[key] = self.vd[key].rsample()
