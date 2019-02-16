@@ -223,7 +223,8 @@ class Model(VI):
                                        self.b0[i:i+1, :],
                                        self.b1[i:i+1, :],
                                        self.b2[i:i+1, :])
-            lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum(1).mean(0)
+            # lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum(1).mean(0)
+            lli += (m[i].float() * logit_pi.sigmoid()).sum(1).mean(0)
 
             assert(lli.dim() == 0)
 

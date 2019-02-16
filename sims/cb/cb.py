@@ -69,7 +69,7 @@ if __name__ == '__main__':
     out = cytopy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=0, save_every=10,
-                           verbose=0, seed=1)
+                           verbose=2, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
