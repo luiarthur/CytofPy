@@ -96,7 +96,7 @@ def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, 
             #
             'W': Dirichlet(torch.ones(K) / K)}
 
-def initialize_y_vd(y, m=None, mean_init=-6.0, sd_init=1.0):
+def initialize_y_vd(y, m=None, mean_init=-4.0, sd_init=0.5):
     """
     make sure to zero the gradients for observed y
     """
