@@ -73,15 +73,15 @@ if __name__ == '__main__':
         if show_plots:
             plt.show()
 
-    K = 10
-    L = [5, 5]
+    K = 20
+    L = [7, 7]
 
     # model.debug=True
     priors = cytopy.model.default_priors(y, K=K, L=L,
-                                         y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
+                                         y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[.1, .5, 1], p_bounds=[.05, .8, .05])
-    priors['sig'] = torch.distributions.log_normal.LogNormal(-1, .5)
-    out = cytopy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
+    # priors['sig'] = torch.distributions.log_normal.LogNormal(-1, .5)
+    out = cytopy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=0, save_every=10,
                            verbose=0, seed=1)
@@ -94,6 +94,7 @@ if __name__ == '__main__':
     show_plots = True
     if show_plots:
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
+        plt.show()
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
@@ -133,10 +134,16 @@ if __name__ == '__main__':
         # TODO: check sig0, sig1
 
         # Plot sig
-        sig = torch.stack([p['sig'] for p in post]).detach().numpy()
-        plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        plt.xlabel('$\sigma$', fontsize=15)
+        sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
+        plt.boxplot(sig0, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.xlabel('$\sigma$0', fontsize=15)
         plt.show()
+
+        sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
+        plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.xlabel('$\sigma$1', fontsize=15)
+        plt.show()
+
 
         W = torch.stack([p['W'] for p in post]).detach().numpy()
         v = torch.stack([p['v'] for p in post]).detach().numpy()
