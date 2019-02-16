@@ -81,8 +81,9 @@ def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, 
             'delta0': Gamma(1, 1),
             'delta1': Gamma(1, 1),
             #
-            'sig0': LogNormal(0, 1),
-            'sig1': LogNormal(0, 1),
+            # 'sig0': LogNormal(0, 1),
+            # 'sig1': LogNormal(0, 1),
+            'sig': LogNormal(0, 1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
@@ -151,9 +152,9 @@ class Model(VI):
         # Assign variational distributions
         self.delta0 = VDGamma(self.L[0])
         self.delta1 = VDGamma(self.L[1])
-        self.sig0 = VDLogNormal(self.L[0])
-        self.sig1 = VDLogNormal(self.L[1])
-        # self.sig = VDLogNormal(self.I)
+        # self.sig0 = VDLogNormal(self.L[0])
+        # self.sig1 = VDLogNormal(self.L[1])
+        self.sig = VDLogNormal(self.I)
         self.eta0 = VDDirichlet((self.I, self.J, self.L[0]))
         self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
         self.W = VDDirichlet((self.I, self.K))
@@ -188,14 +189,14 @@ class Model(VI):
             # Ni x J x Lz
             mu0 = -params['delta0'].cumsum(0)
             d0 = Normal(mu0[None, None, :],
-                        # params['sig'][i]).log_prob(y[i][:, :, None])
-                        params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
+                        params['sig'][i]).log_prob(y[i][:, :, None])
+                        # params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
 
             mu1 = params['delta1'].cumsum(0)
             d1 = Normal(mu1[None, None, :],
-                        # params['sig'][i]).log_prob(y[i][:, :, None])
-                        params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
+                        params['sig'][i]).log_prob(y[i][:, :, None])
+                        # params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
             
             # Ni x J
@@ -214,21 +215,22 @@ class Model(VI):
             c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
             d = c.sum(1)
 
-            fac = self.N[i] / self.Nsum 
+            fac1 = self.N[i] / self.Nsum 
+            fac2 = self.m[i].sum() / self.Nsum
 
             f = d + params['W'][i:i+1, :].log()
-            lli = torch.logsumexp(f, 1).mean(0)
+            lli = torch.logsumexp(f, 1).mean(0) * fac1
 
             logit_pi = prob_miss_logit(y[i],
                                        self.b0[i:i+1, :],
                                        self.b1[i:i+1, :],
                                        self.b2[i:i+1, :])
             # lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum(1).mean(0)
-            lli += (m[i].float() * logit_pi.sigmoid()).sum(1).mean(0)
+            lli += (m[i].float() * logit_pi.sigmoid().log()).mean() * fac2
 
             assert(lli.dim() == 0)
 
-            ll += lli * fac
+            ll += lli
 
         if self.verbose >= 2:
             print('log_like: {}'.format(ll))
@@ -251,6 +253,10 @@ class Model(VI):
             else:
                 # NOTE: self.vd refers to the variational distributions object
                 res += kld(self.vd[key].dist(), self.priors[key]).sum()
+
+            if torch.isnan(res).sum() > 0:
+                print('nan for key: {}'.format(key))
+                print(params[key])
 
         if self.verbose >= 2:
             print('kl_qp: {}'.format(res / self.Nsum))

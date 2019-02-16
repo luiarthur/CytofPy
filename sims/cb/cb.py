@@ -34,11 +34,23 @@ if __name__ == '__main__':
 
     # Read Data
     data = cytopy.util.readCB(path_to_cb_data)
+    I = len(data['y'])
+
+    # remove markers that are highly missing/negative or positive
+    good_markers = [True, False, True, False, True, False, True, True, False,
+                    True, False, True, True, True, False, True, True, False, False,
+                    True, False, True, True, True, True, False, True, False, True,
+                    True, False, True]
+    good_markers = torch.tensor(good_markers).nonzero().squeeze()
+
+    for i in range(I):
+        data['y'][i] = data['y'][i][:, good_markers]
+        data['m'][i] = data['m'][i][:, good_markers]
+
+    # remove cells with expressions below -6
     cytopy.util.preprocess(data, rm_cells_below=-6.0)
     print(data['N'])
-
     y = copy.deepcopy(data['y'])
-    I = len(y)
 
     # Color map
     cm_greys = plt.cm.get_cmap('Greys')
@@ -65,7 +77,10 @@ if __name__ == '__main__':
     L = [5, 5]
 
     # model.debug=True
-    priors = cytopy.model.default_priors(y, K=K, L=L)
+    priors = cytopy.model.default_priors(y, K=K, L=L,
+                                         y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
+                                         # y_quantiles=[.1, .5, 1], p_bounds=[.05, .8, .05])
+    priors['sig'] = torch.distributions.log_normal.LogNormal(-1, .5)
     out = cytopy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=0, save_every=10,
@@ -76,6 +91,7 @@ if __name__ == '__main__':
     elbo = out['elbo']
     mod = out['model']
 
+    show_plots = True
     if show_plots:
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
@@ -117,13 +133,10 @@ if __name__ == '__main__':
         # TODO: check sig0, sig1
 
         # Plot sig
-        # sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
-        # plt.boxplot(sig0, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        # plt.xlabel('$\sigma$_0', fontsize=15)
-        # for yint in data['params']['sig'].tolist():
-        #     plt.axhline(yint)
-
-        # plt.show()
+        sig = torch.stack([p['sig'] for p in post]).detach().numpy()
+        plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.xlabel('$\sigma$', fontsize=15)
+        plt.show()
 
         W = torch.stack([p['W'] for p in post]).detach().numpy()
         v = torch.stack([p['v'] for p in post]).detach().numpy()
@@ -148,16 +161,17 @@ if __name__ == '__main__':
         pm = cytopy.model.prob_miss(ygrid[:, None, None],
                                     mod.b0[None, :, :], mod.b1[None, :, :], mod.b2[None, :, :])
         # Plot prob miss for i=0, j=2
-        plt.plot(ygrid.numpy(), pm[:, 0, 6].numpy()); plt.show()
+        plt.plot(ygrid.numpy(), pm[:, 0, 18].numpy()); plt.show()
+        plt.plot(ygrid.numpy(), pm[:, 2, 6].numpy()); plt.show()
 
         # Trace plots of variational parameters
-        W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()
-        v_trace = torch.stack([t['v'].dist().mean for t in out['trace']]).detach().numpy()
+        # W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()
+        # v_trace = torch.stack([t['v'].dist().mean for t in out['trace']]).detach().numpy()
 
-        # Trace for v
-        plt.plot(v_trace)
-        plt.title('v trace')
-        plt.show()
+        # # Trace for v
+        # plt.plot(v_trace)
+        # plt.title('v trace')
+        # plt.show()
 
         # Plot sig mean trace
         # sig0_m_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
