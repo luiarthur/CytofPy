@@ -26,3 +26,15 @@ def readCB(cb_filepath:str):
             m.append(torch.isnan(y[i]))
 
     return {'N': N, 'markers': markers, 'y': y, 'm': m}
+
+def preprocess(data, rm_cells_below=-6.0):
+    idx = []
+    I = len(data['y'])
+    for i in range(I):
+        is_above_min = data['y'][i] > rm_cells_below
+        is_nan = torch.isnan(data['y'][i])
+        idx_i = (is_above_min + is_nan).prod(1)
+        idx_i = idx_i.nonzero().squeeze()
+        data['N'][i] = len(idx_i)
+        data['y'][i] = data['y'][i][idx_i, :]
+        data['m'][i] = data['m'][i][idx_i, :]

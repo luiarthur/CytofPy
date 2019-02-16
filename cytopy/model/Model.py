@@ -6,8 +6,9 @@ from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
 from torch.distributions.log_normal import LogNormal
 from torch.distributions.kl import kl_divergence as kld
 from cytopy.model.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
-
 from torch.nn import Parameter, ParameterList
+
+import numpy as np
 
 def compute_Z(logit, tau):
     """
@@ -22,8 +23,35 @@ def compute_Z(logit, tau):
     Z = (smoothed_Z > 0.5).float()
     return (Z - smoothed_Z).detach() + smoothed_Z
 
+@torch.jit.script
+def prob_miss_logit(y, b0, b1, b2):
+    return b0 + b1 * y + b2 * y**2
 
-def default_priors(y, K:int=30, L=None):
+@torch.jit.script
+def prob_miss(y, b0, b1, b2):
+    return prob_miss_logit(y, b0, b1, b2).sigmoid()
+
+def solve_beta(y, p):
+    k = len(p)
+    p = np.array(p)
+    Y = np.concatenate([[np.ones(k)], [y], [y**2]]).T
+    beta = np.linalg.solve(Y, np.log(p) - np.log1p(-p))
+    return torch.tensor(beta).float()
+
+# TODO: Put this test in tests/
+# solve_beta(np.array([-5.0, -3.0, -1.0]), np.array([.05, .8 , .05]))
+# exact: -8.35785565, -6.49610001, -1.08268334
+
+def gen_beta_est(y_ij, y_quantiles, p_bounds):
+    yij_neg = y_ij[y_ij < 0]
+    y_bounds = np.percentile(yij_neg.numpy(), y_quantiles)
+    return solve_beta(y_bounds, p_bounds)
+
+# TODO: Put this test in tests/
+# gen_beta_est(torch.randn(10000), [3, 30, 50], [.05, .8, .05])
+# approx: -18.763069081151038 -30.50605414798636 -10.654946017898444
+
+def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05]):
     I = len(y)
 
     J = y[0].size(1)
@@ -36,6 +64,17 @@ def default_priors(y, K:int=30, L=None):
 
     if L is None:
         L = [5, 5]
+    
+    b0 = torch.zeros((I, J))
+    b1 = torch.zeros((I, J))
+    b2 = torch.zeros((I, J))
+
+    for i in range(I):
+        for j in range(J):
+            beta = gen_beta_est(y[i][:, j], y_quantiles, p_bounds)
+            b0[i, j] = beta[0]
+            b1[i, j] = beta[1]
+            b2[i, j] = beta[2]
 
     return {'I': I, 'J': J, 'N': N, 'L': L, 'K': K,
             #
@@ -51,8 +90,9 @@ def default_priors(y, K:int=30, L=None):
             'alpha': Gamma(.1, .1),
             'H': Normal(0, 1),
             #
-            'b0': Gamma(1, 1),
-            'b1': Gamma(1, 1),
+            'b0': b0,
+            'b1': b1,
+            'b2': b2,
             #
             'W': Dirichlet(torch.ones(K) / K)}
 
@@ -96,6 +136,10 @@ class Model(VI):
 
         # Tuning Parameters
         self.tau = tau
+        # coefficients defining the missing mechanism
+        self.b0 = priors['b0']
+        self.b1 = priors['b1']
+        self.b2 = priors['b2']
 
         # Dimensions of parameters
         self.L = priors['L']
@@ -114,8 +158,6 @@ class Model(VI):
         self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
         self.W = VDDirichlet((self.I, self.K))
         self.alpha = VDGamma(1)
-        self.b0 = VDGamma((self.I, self.J))
-        self.b1 = VDGamma((self.I, self.J))
         self.v = VDBeta(self.K)
         self.H = VDNormal((self.J, self.K))
 
@@ -177,7 +219,10 @@ class Model(VI):
             f = d + params['W'][i:i+1, :].log()
             lli = torch.logsumexp(f, 1).mean(0)
 
-            logit_pi = -params['b0'][i:i+1, :] - params['b1'][i:i+1, :] * y[i]
+            logit_pi = prob_miss_logit(y[i],
+                                       self.b0[i:i+1, :],
+                                       self.b1[i:i+1, :],
+                                       self.b2[i:i+1, :])
             lli += Bernoulli(logits=logit_pi).log_prob(m[i].float()).sum(1).mean(0)
 
             assert(lli.dim() == 0)

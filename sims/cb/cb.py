@@ -20,7 +20,7 @@ def add_gridlines_Z(Z):
 
 
 if __name__ == '__main__':
-    torch.set_num_threads(4)
+    torch.set_num_threads(8)
 
     path_to_exp_results = 'results/test/'
     os.makedirs(path_to_exp_results, exist_ok=True)
@@ -32,8 +32,11 @@ if __name__ == '__main__':
     torch.manual_seed(0) # This data is good
     np.random.seed(0)
 
-    # Success
+    # Read Data
     data = cytopy.util.readCB(path_to_cb_data)
+    cytopy.util.preprocess(data, rm_cells_below=-6.0)
+    print(data['N'])
+
     y = copy.deepcopy(data['y'])
     I = len(y)
 
@@ -71,10 +74,10 @@ if __name__ == '__main__':
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
     elbo = out['elbo']
+    mod = out['model']
 
     if show_plots:
-        out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
-        mod = out['model']
+        # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
@@ -141,16 +144,11 @@ if __name__ == '__main__':
 
 
         # TODO: Plot b0, b1
-        b0 = torch.stack([p['b0'] for p in post]).detach().numpy()
-        b1 = torch.stack([p['b1'] for p in post]).detach().numpy()
-
-        def pmiss(b0, b1, ygrid, i, j):
-            z = -b0[:, i, j, None] - b1[:, i, j, None] * ygrid[None, :]
-            return 1 / (1 + np.exp(-z))
-
-        ygrid = np.arange(-8,8,.1)
-        pm = pmiss(b0, b1, ygrid, i=0, j=1)
-        plt.plot(ygrid, pm.mean(0)); plt.show()
+        ygrid = torch.arange(-8, 8, .1)
+        pm = cytopy.model.prob_miss(ygrid[:, None, None],
+                                    mod.b0[None, :, :], mod.b1[None, :, :], mod.b2[None, :, :])
+        # Plot prob miss for i=0, j=2
+        plt.plot(ygrid.numpy(), pm[:, 0, 6].numpy()); plt.show()
 
         # Trace plots of variational parameters
         W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()

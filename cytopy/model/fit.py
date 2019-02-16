@@ -2,7 +2,7 @@ import torch
 import math
 import datetime
 import numpy as np
-from .Model import Model, default_priors
+from .Model import *
 import copy
 import sys
 
