@@ -253,12 +253,12 @@ class Model(VI):
                         #     nj = nan_idx.nonzero()
                         #     print('i: {} | (n,j): {}'.format(i, nan_idx.nonzero()))
 
-                        logit_pi = prob_miss_logit(yi,
-                                                   self.b0[i:i+1, :],
-                                                   self.b1[i:i+1, :],
-                                                   self.b2[i:i+1, :])
+                        pm_i = prob_miss(yi,
+                                         self.b0[i:i+1, :],
+                                         self.b1[i:i+1, :],
+                                         self.b2[i:i+1, :])
 
-                        lp = (mi.float() * logit_pi.sigmoid().log()).mean()
+                        lp = (mi.float() * pm_i.log()).mean()
                         lq = Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).mean()
                         res += (lq - lp) * fac
             else:

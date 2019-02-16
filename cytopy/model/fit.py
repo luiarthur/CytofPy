@@ -64,8 +64,14 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         if save_every > 0 and t % save_every == 0 and elbo_good:
             best_model = copy.deepcopy(model)
 
-        if trace_every > 0 and t % trace_every == 0: # and not repaired_grads:
-            trace.append(best_model.vd)
+        if trace_every > 0 and t % trace_every == 0 and elbo_good: # and not repaired_grads:
+            vd = {}
+            for key in model.vd:
+                if key == 'y':
+                    pass
+                else:
+                    vd[key] = copy.deepcopy(model.vd[key])
+            trace.append(vd)
 
         if t > 10 and abs(elbo_hist[-1] / elbo_hist[-2] - 1) < eps:
             print('Convergence suspected! Ending optimizer early.')

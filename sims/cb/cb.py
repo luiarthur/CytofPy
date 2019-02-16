@@ -24,6 +24,7 @@ if __name__ == '__main__':
 
     path_to_exp_results = 'results/test/'
     os.makedirs(path_to_exp_results, exist_ok=True)
+    os.makedirs('{}/pm/'.format(path_to_exp_results), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
 
     show_plots = False
@@ -59,19 +60,17 @@ if __name__ == '__main__':
     cm.set_over(color='red')
     cm.set_bad(color='black')
 
-    if show_plots:
-        # Plot yi histograms
-        plt.hist(y[0][:, 1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
-        plt.hist(y[1][:, 3], bins=100, density=True); plt.xlim(-15, 15); plt.show()
-        plt.hist(y[2][:, -1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
+    # Plot yi histograms
+    # plt.hist(y[0][:, 1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
+    # plt.hist(y[1][:, 3], bins=100, density=True); plt.xlim(-15, 15); plt.show()
+    # plt.hist(y[2][:, -1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
 
     # Heatmaps
     for i in range(I):
         plt.imshow(y[i], aspect='auto', vmin=-2, vmax=2, cmap=cm)
         plt.colorbar()
         plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i))
-        if show_plots:
-            plt.show()
+        plt.close()
 
     K = 20
     L = [7, 7]
@@ -81,9 +80,9 @@ if __name__ == '__main__':
                                          y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[.1, .5, 1], p_bounds=[.05, .8, .05])
     # priors['sig'] = torch.distributions.log_normal.LogNormal(-1, .5)
-    out = cytopy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
+    out = cytopy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=1000, tau=0.1,
-                           trace_every=0, save_every=10,
+                           trace_every=50, save_every=10,
                            verbose=0, seed=1)
 
     # Save output
@@ -93,12 +92,15 @@ if __name__ == '__main__':
 
     show_plots = True
     if show_plots:
+        print("Making Plots...")
+
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
         plt.show()
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
-        plt.show()
+        plt.savefig('{}/elbo.pdf'.format(path_to_exp_results))
+        plt.close()
 
         # Posterior Inference
         B = 100
@@ -112,7 +114,7 @@ if __name__ == '__main__':
         plt.imshow(Z.mean(0) > .5, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
         plt.savefig('{}/Z.pdf'.format(path_to_exp_results))
-        plt.show()
+        plt.close()
 
 
         # Plot mu
@@ -123,7 +125,8 @@ if __name__ == '__main__':
         plt.ylabel('$\mu$', rotation=0, labelpad=15)
         plt.axhline(0)
         plt.axvline(mu0.shape[1] + .5)
-        plt.show()
+        plt.savefig('{}/mu.pdf'.format(path_to_exp_results))
+        plt.close()
 
         # y0
         # FIXME: the observed y's are being changed!
@@ -135,21 +138,23 @@ if __name__ == '__main__':
 
         # Plot sig
         sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
-        plt.boxplot(sig0, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.boxplot(sig0[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.xlabel('$\sigma$0', fontsize=15)
-        plt.show()
+        plt.savefig('{}/sig0.pdf'.format(path_to_exp_results))
+        plt.close()
 
         sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
         plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.xlabel('$\sigma$1', fontsize=15)
-        plt.show()
+        plt.savefig('{}/sig1.pdf'.format(path_to_exp_results))
+        plt.close()
 
 
+        # Plot W, v
         W = torch.stack([p['W'] for p in post]).detach().numpy()
         v = torch.stack([p['v'] for p in post]).detach().numpy()
         alpha = torch.stack([p['alpha'] for p in post]).detach().numpy()
 
-        # Plot W, v
         plt.figure()
         for i in range(mod.I):
             plt.subplot(mod.I + 1, 1, i + 1)
@@ -160,7 +165,8 @@ if __name__ == '__main__':
         plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.ylabel('$v$', rotation=0, labelpad=15)
         plt.tight_layout()
-        plt.show()
+        plt.savefig('{}/W_v.pdf'.format(path_to_exp_results))
+        plt.close()
 
 
         # TODO: Plot b0, b1
@@ -169,30 +175,45 @@ if __name__ == '__main__':
                                     mod.b0[None, :, :], mod.b1[None, :, :], mod.b2[None, :, :])
 
         # Plot prob miss for each (i, j)
-        # for i in range(mod.I):
-        #     for j in range(mod.J):
-        #         plt.plot(ygrid.numpy(), pm[:, i, j].numpy()); plt.show()
-
-        plt.plot(ygrid.numpy(), pm[:, 0, 18].numpy()); plt.show()
-        plt.plot(ygrid.numpy(), pm[:, 2, 6].numpy()); plt.show()
+        for i in range(mod.I):
+            for j in range(mod.J):
+                plt.plot(ygrid.numpy(), pm[:, i, j].numpy())
+                plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
+                plt.close()
 
         # Trace plots of variational parameters
-        # W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()
-        # v_trace = torch.stack([t['v'].dist().mean for t in out['trace']]).detach().numpy()
+        W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()
+        v_trace = torch.stack([t['v'].dist().mean for t in out['trace']]).detach().numpy()
 
-        # # Trace for v
-        # plt.plot(v_trace)
-        # plt.title('v trace')
-        # plt.show()
+        for i in range(mod.I):
+            plt.plot(W_trace[:, i, :])
+            plt.title('w trace i={}'.format(i+1))
+            plt.savefig('{}/W{}_trace.pdf'.format(path_to_exp_results, i+1))
+            plt.close()
+
+        # Trace for v
+        plt.plot(v_trace)
+        plt.title('v trace')
+        plt.savefig('{}/v_trace.pdf'.format(path_to_exp_results))
+        plt.close()
 
         # Plot sig mean trace
-        # sig0_m_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
-        # plt.plot(sig0_m_trace.detach().numpy())
+        sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
+        plt.plot(sig0_trace.detach().numpy()[2:])
+        plt.title('sig0 trace')
+        plt.savefig('{}/sig0_trace.pdf'.format(path_to_exp_results))
+        plt.close()
+
+        sig1_trace = torch.stack([t['sig1'].dist().mean for t in out['trace']])
+        plt.plot(sig1_trace.detach().numpy()[2:])
+        plt.title('sig1 trace')
+        plt.savefig('{}/sig1_trace.pdf'.format(path_to_exp_results))
+        plt.close()
 
         # for i in range(mod.I):
         #     plt.axhline(data['params']['sig'][i])
 
-        # plt.title('trace plot for $\sigma$_0 vp mean')
+        # plt.title('trace plot for $\sigma$ mean')
         # plt.show()
 
 
