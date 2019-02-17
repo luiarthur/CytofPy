@@ -95,7 +95,7 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
             plt.close()
 
-    out = cytopy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
+    out = cytopy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=50, save_every=10,
                            verbose=0, seed=1)
