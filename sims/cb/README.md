@@ -15,3 +15,9 @@ For MCMC, it seems imputing values nearer to bulk of data helps better
 the fit of the observed data.
 
 **Maybe** I should use double instead of float?
+I tried changing everything to double. That made the runs the same on
+local machine and on server. But, elbo's became nan in 70 iterations
+no matter what I did. I changed it back to float.
+
+Perhaps this has something to do with gradients of `rsamples`. Perhaps
+with double and my advi models, the stability is best. IDK.
