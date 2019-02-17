@@ -2,6 +2,7 @@ import os
 import torch
 
 import cytopy
+from lam_post import lam_post
 
 import math
 import matplotlib.pyplot as plt
@@ -72,15 +73,29 @@ if __name__ == '__main__':
         plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i))
         plt.close()
 
-    K = 20
-    L = [7, 7]
+    K = 10
+    L = [5, 5]
 
     # model.debug=True
     priors = cytopy.model.default_priors(y, K=K, L=L,
-                                         y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01])
-                                         # y_quantiles=[.1, .5, 1], p_bounds=[.05, .8, .05])
-    # priors['sig'] = torch.distributions.log_normal.LogNormal(-1, .5)
-    out = cytopy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
+                                         y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
+                                         # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
+
+    # Missing Mechanism
+    ygrid = torch.arange(-8, 8, .1)
+    pm = cytopy.model.prob_miss(ygrid[:, None, None],
+                                priors['b0'][None, :, :],
+                                priors['b1'][None, :, :],
+                                priors['b2'][None, :, :])
+
+    # Plot prob miss for each (i, j)
+    for i in range(priors['I']):
+        for j in range(priors['J']):
+            plt.plot(ygrid.numpy(), pm[:, i, j].numpy())
+            plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
+            plt.close()
+
+    out = cytopy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=50, save_every=10,
                            verbose=0, seed=1)
@@ -169,18 +184,6 @@ if __name__ == '__main__':
         plt.close()
 
 
-        # TODO: Plot b0, b1
-        ygrid = torch.arange(-8, 8, .1)
-        pm = cytopy.model.prob_miss(ygrid[:, None, None],
-                                    mod.b0[None, :, :], mod.b1[None, :, :], mod.b2[None, :, :])
-
-        # Plot prob miss for each (i, j)
-        for i in range(mod.I):
-            for j in range(mod.J):
-                plt.plot(ygrid.numpy(), pm[:, i, j].numpy())
-                plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
-                plt.close()
-
         # Trace plots of variational parameters
         W_trace = torch.stack([t['W'].dist().mean for t in out['trace']]).detach().numpy()
         v_trace = torch.stack([t['v'].dist().mean for t in out['trace']]).detach().numpy()
@@ -216,5 +219,15 @@ if __name__ == '__main__':
         # plt.title('trace plot for $\sigma$ mean')
         # plt.show()
 
+
+        # lam posterior
+        # TODO: This is just a simple version
+        lam = lam_post(mod)
+
+        for i in range(I):
+            plt.imshow(y[i][lam[i].argsort(), :], aspect='auto', vmin=-2, vmax=2, cmap=cm)
+            plt.colorbar()
+            plt.savefig('{}/y{}_post.pdf'.format(path_to_exp_results, i))
+            plt.close()
 
 

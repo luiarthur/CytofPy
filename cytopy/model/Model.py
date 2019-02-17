@@ -81,8 +81,10 @@ def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, 
             'delta0': Gamma(1, 1),
             'delta1': Gamma(1, 1),
             #
-            'sig0': LogNormal(-1, .1),
-            'sig1': LogNormal(-1, .1),
+            # 'sig0': LogNormal(-1, .1),
+            # 'sig1': LogNormal(-1, .1),
+            'sig0': Beta(1, 1),
+            'sig1': Beta(1, 1),
             # 'sig': LogNormal(0, 1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
@@ -152,8 +154,10 @@ class Model(VI):
         # Assign variational distributions
         self.delta0 = VDGamma(self.L[0])
         self.delta1 = VDGamma(self.L[1])
-        self.sig0 = VDLogNormal(self.L[0])
-        self.sig1 = VDLogNormal(self.L[1])
+        # self.sig0 = VDLogNormal(self.L[0])
+        # self.sig1 = VDLogNormal(self.L[1])
+        self.sig0 = VDBeta(self.L[0])
+        self.sig1 = VDBeta(self.L[1])
         # self.sig = VDLogNormal(self.I)
         self.eta0 = VDDirichlet((self.I, self.J, self.L[0]))
         self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
