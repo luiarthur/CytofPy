@@ -13,3 +13,5 @@ while using fewer L-components leads to more Z columns.
 
 For MCMC, it seems imputing values nearer to bulk of data helps better
 the fit of the observed data.
+
+**Maybe** I should use double instead of float?
