@@ -95,8 +95,8 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
             plt.close()
 
-    out = cytopy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
-                           priors=priors, minibatch_size=1000, tau=0.1,
+    out = cytopy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
+                           priors=priors, minibatch_size=2000, tau=0.1,
                            trace_every=50, backup_every=10,
                            verbose=0, seed=1)
 
@@ -118,8 +118,8 @@ if __name__ == '__main__':
         plt.close()
 
         # Posterior Inference
-        B = 100
-        idx = [np.random.choice(mod.N[i], 100) for i in range(mod.I)]
+        B = 1000
+        idx = [np.random.choice(mod.N[i], 1) for i in range(mod.I)]
         post = [mod.sample_params(idx) for b in range(B)]
 
         # Plot Z
@@ -149,21 +149,24 @@ if __name__ == '__main__':
         y0.mean(0)
         y[0]
 
-        # TODO: check sig0, sig1
-
         # Plot sig
-        sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
-        plt.boxplot(sig0[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        plt.xlabel('$\sigma$0', fontsize=15)
-        plt.savefig('{}/sig0.pdf'.format(path_to_exp_results))
+        sig = torch.stack([p['sig'] for p in post]).detach().numpy()
+        plt.boxplot(sig[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.xlabel('$\sigma$', fontsize=15)
+        plt.savefig('{}/sig.pdf'.format(path_to_exp_results))
         plt.close()
 
-        sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
-        plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        plt.xlabel('$\sigma$1', fontsize=15)
-        plt.savefig('{}/sig1.pdf'.format(path_to_exp_results))
-        plt.close()
+        # sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
+        # plt.boxplot(sig0[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        # plt.xlabel('$\sigma$0', fontsize=15)
+        # plt.savefig('{}/sig0.pdf'.format(path_to_exp_results))
+        # plt.close()
 
+        # sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
+        # plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        # plt.xlabel('$\sigma$1', fontsize=15)
+        # plt.savefig('{}/sig1.pdf'.format(path_to_exp_results))
+        # plt.close()
 
         # Plot W, v
         W = torch.stack([p['W'] for p in post]).detach().numpy()
@@ -201,33 +204,37 @@ if __name__ == '__main__':
         plt.close()
 
         # Plot sig mean trace
-        sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
-        plt.plot(sig0_trace.detach().numpy()[2:])
-        plt.title('sig0 trace')
-        plt.savefig('{}/sig0_trace.pdf'.format(path_to_exp_results))
+        sig_trace = torch.stack([t['sig'].dist().mean for t in out['trace']])
+        plt.plot(sig_trace.detach().numpy()[2:])
+        plt.title('sig trace')
+        plt.savefig('{}/sig_trace.pdf'.format(path_to_exp_results))
         plt.close()
 
-        sig1_trace = torch.stack([t['sig1'].dist().mean for t in out['trace']])
-        plt.plot(sig1_trace.detach().numpy()[2:])
-        plt.title('sig1 trace')
-        plt.savefig('{}/sig1_trace.pdf'.format(path_to_exp_results))
-        plt.close()
+        # sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
+        # plt.plot(sig0_trace.detach().numpy()[2:])
+        # plt.title('sig0 trace')
+        # plt.savefig('{}/sig0_trace.pdf'.format(path_to_exp_results))
+        # plt.close()
 
-        # for i in range(mod.I):
-        #     plt.axhline(data['params']['sig'][i])
-
-        # plt.title('trace plot for $\sigma$ mean')
-        # plt.show()
-
+        # sig1_trace = torch.stack([t['sig1'].dist().mean for t in out['trace']])
+        # plt.plot(sig1_trace.detach().numpy()[2:])
+        # plt.title('sig1 trace')
+        # plt.savefig('{}/sig1_trace.pdf'.format(path_to_exp_results))
+        # plt.close()
 
         # lam posterior
         # TODO: This is just a simple version
-        lam = lam_post(mod)
+        lam = [lam_post(mod) for b in range(30)]
+        lam = [torch.stack([lam_b[i] for lam_b in lam]) for i in range(mod.I)]
+        lam_est = [lam_i.mode(0)[0] for lam_i in lam]
 
         for i in range(I):
-            plt.imshow(y[i][lam[i].argsort(), :], aspect='auto', vmin=-2, vmax=2, cmap=cm)
+            plt.imshow(y[i][lam_est[i].argsort(), :], aspect='auto', vmin=-2, vmax=2, cmap=cm)
             plt.colorbar()
             plt.savefig('{}/y{}_post.pdf'.format(path_to_exp_results, i))
             plt.close()
 
+        # YZ
+        # k_ord = W.mean(0).argsort(1)
+        # lam_est[0].argsort()
 

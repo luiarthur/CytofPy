@@ -14,16 +14,19 @@ def lam_post(mod):
         eta1 = mod.eta1.rsample().detach()
         mu0 = -mod.delta0.rsample().cumsum(0).detach()
         mu1 =  mod.delta1.rsample().cumsum(0).detach()
-        sig0 = mod.sig0.rsample().detach()
-        sig1 = mod.sig1.rsample().detach()
+        # sig0 = mod.sig0.rsample().detach()
+        # sig1 = mod.sig1.rsample().detach()
+        sig = mod.sig.rsample().detach()
         yi = mod.y[i].rsample().detach()
 
 
         # compute probs
-        d0 = Normal(mu0[None, None, :], sig0[None, None, :]).log_prob(yi[:, :, None])
+        # d0 = Normal(mu0[None, None, :], sig0[None, None, :]).log_prob(yi[:, :, None])
+        d0 = Normal(mu0[None, None, :], sig[i]).log_prob(yi[:, :, None])
         d0 += eta0[i:i+1, :, :].log()
 
-        d1 = Normal(mu1[None, None, :], sig1[None, None, :]).log_prob(yi[:, :, None])
+        # d1 = Normal(mu1[None, None, :], sig1[None, None, :]).log_prob(yi[:, :, None])
+        d1 = Normal(mu1[None, None, :], sig[i]).log_prob(yi[:, :, None])
         d1 += eta1[i:i+1, :, :].log()
 
         # Ni x J

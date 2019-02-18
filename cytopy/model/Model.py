@@ -246,27 +246,21 @@ class Model(VI):
             elif key == 'y':
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :]
-                    mi_sum = mi.sum()
 
-                    fac = self.msum[i] 
-                    if mi_sum > 0:
+                    if mi.sum() > 0:
                         y_vp_m = self.y_vp[i][0, idx[i], :][mi]
                         y_vp_s = self.y_vp[i][1, idx[i], :][mi].exp()
                         yi = params['y'][i]
-
-                        # DEBUG
-                        # nan_idx = torch.isnan(yi)
-                        # if nan_idx.sum() > 0:
-                        #     nj = nan_idx.nonzero()
-                        #     print('i: {} | (n,j): {}'.format(i, nan_idx.nonzero()))
 
                         pm_i = prob_miss(yi,
                                          self.b0[i:i+1, :],
                                          self.b1[i:i+1, :],
                                          self.b2[i:i+1, :])
 
-                        lp = (mi.float() * pm_i.log()).mean()
                         lq = Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).mean()
+                        lp = pm_i[mi].log().mean()
+
+                        fac = self.msum[i] 
                         res += (lq - lp) * fac
             else:
                 # NOTE: self.vd refers to the variational distributions object
