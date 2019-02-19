@@ -7,7 +7,7 @@ import copy
 import numpy as np
 import pickle
 
-import cytopy
+import cytofpy
 
 class Test_ModelRuns(unittest.TestCase):
     def test_compiles(self):
@@ -23,7 +23,7 @@ class Test_ModelRuns(unittest.TestCase):
         np.random.seed(0)
 
         # TODO: Make this work
-        data = cytopy.util.simdata(N=[300, 100, 200], L0=3, L1=3, J=8)
+        data = cytofpy.util.simdata(N=[300, 100, 200], L0=3, L1=3, J=8)
 
         y = copy.deepcopy(data['data']['y'])
         I = len(y)
@@ -32,8 +32,8 @@ class Test_ModelRuns(unittest.TestCase):
         L = [2, 2]
 
         # model.debug=True
-        priors = cytopy.model.default_priors(y, K=K, L=L, y_bounds=[-5., -3.5, -2.])
-        out = cytopy.model.fit(y, max_iter=20, lr=1e-1, print_freq=1, eps=1e-6,
+        priors = cytofpy.model.default_priors(y, K=K, L=L, y_bounds=[-5., -3.5, -2.])
+        out = cytofpy.model.fit(y, max_iter=20, lr=1e-1, print_freq=1, eps=1e-6,
                                priors=priors, minibatch_size=100, tau=0.1,
                                verbose=0, seed=1)
 

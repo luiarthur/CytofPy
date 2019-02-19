@@ -3,7 +3,7 @@ import torch
 from torch.distributions.log_normal import LogNormal
 from torch.distributions import Gamma
 
-import cytopy
+import cytofpy
 from lam_post import lam_post
 
 import math
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     np.random.seed(0)
 
     # Read Data
-    data = cytopy.util.readCB(path_to_cb_data)
+    data = cytofpy.util.readCB(path_to_cb_data)
     I = len(data['y'])
 
     # remove markers that are highly missing/negative or positive
@@ -67,7 +67,7 @@ if __name__ == '__main__':
         data['m'][i] = data['m'][i][:, good_markers]
 
     # remove cells with expressions below -6
-    cytopy.util.preprocess(data, rm_cells_below=-6.0)
+    cytofpy.util.preprocess(data, rm_cells_below=-6.0)
     print(data['N'])
     y = copy.deepcopy(data['y'])
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     # model.debug=True
     y_bounds = [-5., -3.5, -2.]
-    priors = cytopy.model.default_priors(y, K=K, L=L,
+    priors = cytofpy.model.default_priors(y, K=K, L=L,
                                          y_bounds=y_bounds, p_bounds=[.05, .8, .05])
                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 8, .1)
-    pm = cytopy.model.prob_miss(ygrid[:, None, None],
+    pm = cytofpy.model.prob_miss(ygrid[:, None, None],
                                 priors['b0'][None, :, :],
                                 priors['b1'][None, :, :],
                                 priors['b2'][None, :, :])
@@ -117,7 +117,7 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
             plt.close()
 
-    out = cytopy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=1e-6,
+    out = cytofpy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=50, backup_every=10,
@@ -125,7 +125,7 @@ if __name__ == '__main__':
 
     out = out['model']
     max_iter = 10000
-    out = cytopy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
+    out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=max_iter/50, backup_every=10,

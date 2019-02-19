@@ -5,9 +5,9 @@ from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
 from torch.distributions.log_normal import LogNormal
 from torch.distributions.kl import kl_divergence as kld
 from torch.nn import Parameter
-from cytopy.model.GlobalMod import compute_Z
+from cytofpy.model.GlobalMod import compute_Z
 
-from cytopy.model.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
+from cytofpy.model.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
 
 
 class LocalMod(VI):

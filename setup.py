@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
-setup(name='cytopy',
+setup(name='cytofpy',
       version='0.1',
       description='Cytof variational inference model implemented using PyTorch',
-      url='http://github.com/cytopy',
+      url='http://github.com/cytofpy',
       author='Arthur Lui',
       author_email='luiarthur@gmail.com',
       license='MIT',

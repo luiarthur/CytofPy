@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .PHONY: install clean test lint
 
 lint:
-	pylint cytopy
+	pylint cytofpy
 
 clean_pycache:
 	find . | grep -E "(__pycache__|\.pyc)" | xargs rm -rf

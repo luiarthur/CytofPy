@@ -1,7 +1,7 @@
 import os
 import torch
 
-import cytopy
+import cytofpy
 
 import math
 import matplotlib.pyplot as plt
@@ -30,11 +30,11 @@ if __name__ == '__main__':
     np.random.seed(0)
 
     # Success
-    # data = cytopy.util.simdata(N=[30000, 10000, 20000], L0=1, L1=1, J=4, a_W=[300, 700])
-    # data = cytopy.util.simdata(N=[30000, 10000, 20000], L0=3, L1=3, J=4, a_W=[300, 700])
+    # data = cytofpy.util.simdata(N=[30000, 10000, 20000], L0=1, L1=1, J=4, a_W=[300, 700])
+    # data = cytofpy.util.simdata(N=[30000, 10000, 20000], L0=3, L1=3, J=4, a_W=[300, 700])
 
     # TODO: Make this work
-    data = cytopy.util.simdata(N=[30000, 10000, 20000], L0=3, L1=3, J=8)
+    data = cytofpy.util.simdata(N=[30000, 10000, 20000], L0=3, L1=3, J=8)
 
     cb = data['data']
     y = copy.deepcopy(cb['y'])
@@ -70,8 +70,8 @@ if __name__ == '__main__':
     L = [2, 2]
 
     # model.debug=True
-    priors = cytopy.model.default_priors(y, K=K, L=L)
-    out = cytopy.model.fit(y, max_iter=5000, lr_g=1e-1, lr_l=1e-2, print_freq=10, eps=1e-6,
+    priors = cytofpy.model.default_priors(y, K=K, L=L)
+    out = cytofpy.model.fit(y, max_iter=5000, lr_g=1e-1, lr_l=1e-2, print_freq=10, eps=1e-6,
                            priors=priors, minibatch_size=100, tau=0.1,
                            verbose=0, seed=1)
 
