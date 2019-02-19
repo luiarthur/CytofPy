@@ -1,4 +1,4 @@
-# CytoPy
+# CytofPy
 Implementation of Cytof model using Variational Inference in Python3 (using PyTorch)
 
 # References
