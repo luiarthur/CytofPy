@@ -73,7 +73,8 @@ if __name__ == '__main__':
 
     # Color map
     cm_greys = plt.cm.get_cmap('Greys', 5)
-    cm = plt.cm.get_cmap('bwr')
+    VMIN, VMAX = (-3, 3) 
+    cm = plt.cm.get_cmap('bwr', 7)
     cm.set_under(color='blue')
     cm.set_over(color='red')
     cm.set_bad(color='black')
@@ -85,7 +86,7 @@ if __name__ == '__main__':
 
     # Heatmaps
     for i in range(I):
-        plt.imshow(y[i], aspect='auto', vmin=-2, vmax=2, cmap=cm)
+        plt.imshow(y[i], aspect='auto', vmin=VMIN, vmax=VMAX, cmap=cm)
         plt.colorbar()
         plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i + 1))
         plt.close()
@@ -282,7 +283,7 @@ if __name__ == '__main__':
             counts_cumsum = np.cumsum(counts)
             plt.subplot(gs[1])
             yi = y[i][lami_new.argsort(), :].numpy().T
-            plt.imshow(yi, aspect='auto', vmin=-2, vmax=2, cmap=cm)
+            plt.imshow(yi, aspect='auto', vmin=VMIN, vmax=VMAX, cmap=cm)
             for c in counts_cumsum[:-1]:
                 plt.axvline(c, color='yellow')
             plt.colorbar()
