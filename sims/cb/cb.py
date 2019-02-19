@@ -100,7 +100,7 @@ if __name__ == '__main__':
                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .01)
-    priors['alpha'] = Gamma(.4, .1)
+    priors['alpha'] = Gamma(.1, .1)
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 8, .1)
