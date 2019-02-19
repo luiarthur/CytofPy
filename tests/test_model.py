@@ -32,7 +32,7 @@ class Test_ModelRuns(unittest.TestCase):
         L = [2, 2]
 
         # model.debug=True
-        priors = cytopy.model.default_priors(y, K=K, L=L)
+        priors = cytopy.model.default_priors(y, K=K, L=L, y_bounds=[-5., -3.5, -2.])
         out = cytopy.model.fit(y, max_iter=20, lr=1e-1, print_freq=1, eps=1e-6,
                                priors=priors, minibatch_size=100, tau=0.1,
                                verbose=0, seed=1)

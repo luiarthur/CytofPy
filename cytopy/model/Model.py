@@ -54,7 +54,8 @@ def gen_beta_est(y_ij, y_quantiles, p_bounds):
 # gen_beta_est(torch.randn(10000), [3, 30, 50], [.05, .8, .05])
 # approx: -18.763069081151038 -30.50605414798636 -10.654946017898444
 
-def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05]):
+def default_priors(y, K:int=30, L=None,
+                   y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05], y_bounds=None):
     I = len(y)
 
     J = y[0].size(1)
@@ -74,10 +75,15 @@ def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, 
 
     for i in range(I):
         for j in range(J):
-            beta = gen_beta_est(y[i][:, j], y_quantiles, p_bounds)
+            if y_bounds is None:
+                beta = gen_beta_est(y[i][:, j], y_quantiles, p_bounds)
+            else:
+                beta = solve_beta(np.array(y_bounds), p_bounds)
+
             b0[i, j] = beta[0]
             b1[i, j] = beta[1]
             b2[i, j] = beta[2]
+
 
     return {'I': I, 'J': J, 'N': N, 'L': L, 'K': K,
             #
@@ -88,7 +94,8 @@ def default_priors(y, K:int=30, L=None, y_quantiles=[0, 35, 70], p_bounds=[.05, 
             # 'sig1': LogNormal(-1, .1),
             # 'sig0': Beta(1, 10),
             # 'sig1': Beta(1, 10),
-            'sig': LogNormal(0, 1),
+            'sig': LogNormal(-1, .1),
+            # 'sig': Gamma(1, 1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
@@ -162,6 +169,7 @@ class Model(VI):
         # self.sig0 = VDBeta(self.L[0])
         # self.sig1 = VDBeta(self.L[1])
         self.sig = VDLogNormal(self.I)
+        # self.sig = VDGamma(self.I)
         self.eta0 = VDDirichlet((self.I, self.J, self.L[0]))
         self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
         self.W = VDDirichlet((self.I, self.K))

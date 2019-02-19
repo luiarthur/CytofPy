@@ -1,14 +1,27 @@
 import os
 import torch
+from torch.distributions.log_normal import LogNormal
 
 import cytopy
 from lam_post import lam_post
 
 import math
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import copy
 import numpy as np
 import pickle
+
+def relabel_lam(lami_est, wi_mean):
+    K = wi_mean.shape[0]
+    k_ord = wi_mean.argsort()
+    lami_new = lami_est + 0
+    counts = []
+    for k in range(K):
+        idx_k = lami_est == k_ord[k]
+        lami_new[idx_k] = k
+        counts.append(idx_k.sum())
+    return (lami_new, counts)
 
 
 def add_gridlines_Z(Z):
@@ -55,7 +68,7 @@ if __name__ == '__main__':
     y = copy.deepcopy(data['y'])
 
     # Color map
-    cm_greys = plt.cm.get_cmap('Greys')
+    cm_greys = plt.cm.get_cmap('Greys', 5)
     cm = plt.cm.get_cmap('bwr')
     cm.set_under(color='blue')
     cm.set_over(color='red')
@@ -70,16 +83,19 @@ if __name__ == '__main__':
     for i in range(I):
         plt.imshow(y[i], aspect='auto', vmin=-2, vmax=2, cmap=cm)
         plt.colorbar()
-        plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i))
+        plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i + 1))
         plt.close()
 
     K = 10
     L = [5, 5]
 
     # model.debug=True
+    y_bounds = [-6., -4.5, -3.]
     priors = cytopy.model.default_priors(y, K=K, L=L,
-                                         y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
+                                         y_bounds=y_bounds, p_bounds=[.01, .8, .01])
+                                         # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
+    priors['sig'] = LogNormal(-1, .01)
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 8, .1)
@@ -95,8 +111,9 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
             plt.close()
 
-    out = cytopy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
-                           priors=priors, minibatch_size=2000, tau=0.1,
+    out = cytopy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
+                           y_mean_init=y_bounds[1], y_sd_init=0.1,
+                           priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=50, backup_every=10,
                            verbose=0, seed=1)
 
@@ -126,8 +143,9 @@ if __name__ == '__main__':
         H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
         v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
         Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
-        plt.imshow(Z.mean(0) > .5, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
+        plt.imshow(Z.mean(0), aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
+        plt.colorbar()
         plt.savefig('{}/Z.pdf'.format(path_to_exp_results))
         plt.close()
 
@@ -145,13 +163,15 @@ if __name__ == '__main__':
 
         # y0
         # FIXME: the observed y's are being changed!
-        y0 = torch.stack([mod.y[0].rsample() for b in range(10)])
-        y0.mean(0)
-        y[0]
+        for i in range(mod.I):
+            yi = torch.stack([mod.y[i].rsample().detach() for b in range(10)])
+            plt.hist(yi.mean(0)[mod.m[i]].numpy())
+            plt.savefig('{}/y{}_imputed_hist.pdf'.format(path_to_exp_results, i + 1))
+            plt.close()
 
         # Plot sig
         sig = torch.stack([p['sig'] for p in post]).detach().numpy()
-        plt.boxplot(sig[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.xlabel('$\sigma$', fontsize=15)
         plt.savefig('{}/sig.pdf'.format(path_to_exp_results))
         plt.close()
@@ -228,13 +248,34 @@ if __name__ == '__main__':
         lam = [torch.stack([lam_b[i] for lam_b in lam]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
 
-        for i in range(I):
-            plt.imshow(y[i][lam_est[i].argsort(), :], aspect='auto', vmin=-2, vmax=2, cmap=cm)
-            plt.colorbar()
-            plt.savefig('{}/y{}_post.pdf'.format(path_to_exp_results, i))
-            plt.close()
+        W_mean = W.mean(0)
+        Z_mean = Z.mean(0)
 
-        # YZ
-        # k_ord = W.mean(0).argsort(1)
-        # lam_est[0].argsort()
+        for i in range(I):
+            k_ord = W_mean[i, :].argsort()
+            z_cols = []
+            for k in k_ord.tolist():
+                if Z_mean[:, k].sum() > 0:
+                    z_cols.append(k)
+            z_cols = np.array(z_cols)
+            Z_hat = Z_mean[:, z_cols]
+            gs = gridspec.GridSpec(1, 2, width_ratios=[2, 5]) 
+            plt.subplot(gs[0])
+            plt.imshow(Z_hat, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
+            plt.colorbar()
+            plt.xticks(np.arange(len(z_cols)), z_cols + 1)
+            plt.yticks(np.arange(mod.J), np.arange(mod.J) + 1)
+            add_gridlines_Z(Z_hat)
+            lami_new, counts = relabel_lam(lam_est[i], W_mean[i, :])
+            counts_cumsum = np.cumsum(counts)
+            plt.subplot(gs[1])
+            yi = y[i][lami_new.argsort(), :].numpy().T
+            plt.imshow(yi, aspect='auto', vmin=-2, vmax=2, cmap=cm)
+            for c in counts_cumsum[:-1]:
+                plt.axvline(c, color='yellow')
+            plt.colorbar()
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig('{}/y{}_post.pdf'.format(path_to_exp_results, i + 1))
+            plt.close()
 
