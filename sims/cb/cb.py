@@ -75,7 +75,7 @@ if __name__ == '__main__':
         plt.close()
 
     K = 10
-    L = [10, 10]
+    L = [5, 3]
 
     # model.debug=True
     y_bounds = [-6., -4., -2.]
