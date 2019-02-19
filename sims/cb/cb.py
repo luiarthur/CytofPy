@@ -95,9 +95,9 @@ if __name__ == '__main__':
     L = [5, 5]
 
     # model.debug=True
-    y_bounds = [-6., -4.5, -3.]
+    y_bounds = [-5., -3.5, -2.]
     priors = cytopy.model.default_priors(y, K=K, L=L,
-                                         y_bounds=y_bounds, p_bounds=[.01, .8, .01])
+                                         y_bounds=y_bounds, p_bounds=[.05, .8, .05])
                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .01)
@@ -124,10 +124,11 @@ if __name__ == '__main__':
                            verbose=0, seed=1)
 
     out = out['model']
-    out = cytopy.model.fit(y, max_iter=10000, lr=1e-2, print_freq=10, eps=1e-6,
+    max_iter = 10000
+    out = cytopy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=1000, tau=0.1,
-                           trace_every=50, backup_every=10,
+                           trace_every=max_iter/50, backup_every=10,
                            init=out, verbose=0, seed=1)
 
     # Save output
@@ -148,7 +149,7 @@ if __name__ == '__main__':
         plt.close()
 
         # Posterior Inference
-        B = 1000
+        B = 100
         idx = [np.random.choice(mod.N[i], 1) for i in range(mod.I)]
         post = [mod.sample_params(idx) for b in range(B)]
 
