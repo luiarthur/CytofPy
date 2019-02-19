@@ -11,7 +11,7 @@ from torch.nn import Parameter, ParameterList
 import numpy as np
 
 # Set default type to float64 (instead of float32)
-# torch.set_default_dtype(torch.float64)
+torch.set_default_dtype(torch.float64)
 
 def compute_Z(logit, tau):
     """
@@ -23,7 +23,7 @@ def compute_Z(logit, tau):
     The only gradient will then be that of smoothed Z.
     """
     smoothed_Z = (logit / tau).sigmoid()
-    Z = (smoothed_Z > 0.5).float()
+    Z = (smoothed_Z > 0.5).double()
     return (Z - smoothed_Z).detach() + smoothed_Z
 
 @torch.jit.script
@@ -39,7 +39,7 @@ def solve_beta(y, p):
     p = np.array(p)
     Y = np.concatenate([[np.ones(k)], [y], [y**2]]).T
     beta = np.linalg.solve(Y, np.log(p) - np.log1p(-p))
-    return torch.tensor(beta).float()
+    return torch.tensor(beta).double()
 
 # TODO: Put this test in tests/
 # solve_beta(np.array([-5.0, -3.0, -1.0]), np.array([.05, .8 , .05]))
@@ -291,7 +291,7 @@ class Model(VI):
             if key == 'y':
                 params['y'] = []
                 for i in range(self.I):
-                    mi = self.m[i][idx[i], :].float()
+                    mi = self.m[i][idx[i], :].double()
                     yi_vp = self.y_vp[i][:, idx[i], :]
                     yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
                     # NOTE: A trick to prevent computation of gradients for

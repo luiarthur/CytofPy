@@ -1,6 +1,7 @@
 import os
 import torch
 from torch.distributions.log_normal import LogNormal
+from torch.distributions import Gamma
 
 import cytopy
 from lam_post import lam_post
@@ -11,6 +12,9 @@ from matplotlib import gridspec
 import copy
 import numpy as np
 import pickle
+
+# Use smaller learning rate, with double precision
+# https://discuss.pytorch.org/t/why-double-precision-training-sometimes-performs-much-better/31194
 
 def relabel_lam(lami_est, wi_mean):
     K = wi_mean.shape[0]
@@ -96,6 +100,7 @@ if __name__ == '__main__':
                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .01)
+    priors['alpha'] = Gamma(.4, .1)
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 8, .1)
@@ -111,11 +116,18 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
             plt.close()
 
-    out = cytopy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
+    out = cytopy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=50, backup_every=10,
                            verbose=0, seed=1)
+
+    out = out['model']
+    out = cytopy.model.fit(y, max_iter=10000, lr=1e-2, print_freq=10, eps=1e-6,
+                           y_mean_init=y_bounds[1], y_sd_init=0.1,
+                           priors=priors, minibatch_size=1000, tau=0.1,
+                           trace_every=50, backup_every=10,
+                           init=out, verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))

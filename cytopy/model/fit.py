@@ -18,7 +18,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         print_freq=10, seed=1, y_mean_init=-6.0, y_sd_init=0.5,
         trace_every=None, eps=1e-6, tau=0.1, backup_every=10,
         y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05],
-        verbose=1, flush=True):
+        init=None, verbose=1, flush=True):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -31,7 +31,11 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
 
     m = [torch.isnan(yi) for yi in y]
 
-    model = Model(y=y, m=m, priors=priors, tau=tau, verbose=verbose)
+    if init is None:
+        model = Model(y=y, m=m, priors=priors, tau=tau, verbose=verbose)
+    else:
+        model = init
+
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     best_model = copy.deepcopy(model)
 
