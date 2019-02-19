@@ -9,7 +9,7 @@ def lam_post(mod):
         H = mod.H.rsample().detach()
         v = mod.v.rsample().detach()
         Z = (v.cumprod(0) > torch.distributions.Normal(0, 1).cdf(H))
-        Z = Z.float()
+        Z = Z.double()
         eta0 = mod.eta0.rsample().detach()
         eta1 = mod.eta1.rsample().detach()
         mu0 = -mod.delta0.rsample().cumsum(0).detach()
