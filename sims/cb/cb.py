@@ -38,7 +38,7 @@ def add_gridlines_Z(Z):
 
 
 if __name__ == '__main__':
-    torch.set_num_threads(0)
+    torch.set_num_threads(1)
 
     path_to_exp_results = 'results/test/'
     os.makedirs(path_to_exp_results, exist_ok=True)
