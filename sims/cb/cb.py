@@ -4,7 +4,8 @@ from torch.distributions.log_normal import LogNormal
 from torch.distributions import Gamma
 
 import cytofpy
-from lam_post import lam_post
+import lam_post
+from plot_yz import add_gridlines_Z, plot_yz
 
 import math
 import matplotlib.pyplot as plt
@@ -16,33 +17,15 @@ import pickle
 # Use smaller learning rate, with double precision
 # https://discuss.pytorch.org/t/why-double-precision-training-sometimes-performs-much-better/31194
 
-def relabel_lam(lami_est, wi_mean):
-    K = wi_mean.shape[0]
-    k_ord = wi_mean.argsort()
-    lami_new = lami_est + 0
-    counts = []
-    for k in range(K):
-        idx_k = lami_est == k_ord[k]
-        lami_new[idx_k] = k
-        counts.append(idx_k.sum())
-    return (lami_new, counts)
-
-
-def add_gridlines_Z(Z):
-    J, K = Z.shape
-    for j in range(J):
-        plt.axhline(y=j+.5, color='grey', linewidth=.5)
-
-    for k in range(K):
-        plt.axvline(x=k+.5, color='grey', linewidth=.5)
 
 
 if __name__ == '__main__':
     torch.set_num_threads(1)
 
     path_to_exp_results = 'results/test/'
-    os.makedirs(path_to_exp_results, exist_ok=True)
-    os.makedirs('{}/pm/'.format(path_to_exp_results), exist_ok=True)
+    img_dir = path_to_exp_results + 'img/'
+    os.makedirs(img_dir, exist_ok=True)
+    os.makedirs('{}/pm/'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
 
     show_plots = False
@@ -88,16 +71,16 @@ if __name__ == '__main__':
     for i in range(I):
         plt.imshow(y[i], aspect='auto', vmin=VMIN, vmax=VMAX, cmap=cm)
         plt.colorbar()
-        plt.savefig('{}/y{}.pdf'.format(path_to_exp_results, i + 1))
+        plt.savefig('{}/y{}.pdf'.format(img_dir, i + 1))
         plt.close()
 
     K = 10
-    L = [5, 5]
+    L = [10, 10]
 
     # model.debug=True
-    y_bounds = [-5., -3.5, -2.]
+    y_bounds = [-6., -4., -2.]
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                         y_bounds=y_bounds, p_bounds=[.05, .8, .05])
+                                         y_bounds=y_bounds, p_bounds=[.01, .8, .01])
                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .01)
@@ -114,7 +97,7 @@ if __name__ == '__main__':
     for i in range(priors['I']):
         for j in range(priors['J']):
             plt.plot(ygrid.numpy(), pm[:, i, j].numpy())
-            plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(path_to_exp_results, i+1, j+1))
+            plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(img_dir, i+1, j+1))
             plt.close()
 
     out = cytofpy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=1e-6,
@@ -124,28 +107,27 @@ if __name__ == '__main__':
                            verbose=0, seed=1)
 
     out = out['model']
-    max_iter = 10000
+    max_iter = 20000
     out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=1000, tau=0.1,
-                           trace_every=max_iter/50, backup_every=10,
+                           trace_every=max_iter/50, backup_every=50,
                            init=out, verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
-    elbo = out['elbo']
-    mod = out['model']
-
     show_plots = True
     if show_plots:
         print("Making Plots...")
 
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
-        plt.show()
+
+        elbo = out['elbo']
+        mod = out['model']
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
-        plt.savefig('{}/elbo.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/elbo.pdf'.format(img_dir))
         plt.close()
 
         # Posterior Inference
@@ -160,7 +142,7 @@ if __name__ == '__main__':
         plt.imshow(Z.mean(0), aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
         plt.colorbar()
-        plt.savefig('{}/Z.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/Z.pdf'.format(img_dir))
         plt.close()
 
 
@@ -172,7 +154,7 @@ if __name__ == '__main__':
         plt.ylabel('$\mu$', rotation=0, labelpad=15)
         plt.axhline(0)
         plt.axvline(mu0.shape[1] + .5)
-        plt.savefig('{}/mu.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/mu.pdf'.format(img_dir))
         plt.close()
 
         # y0
@@ -180,14 +162,14 @@ if __name__ == '__main__':
         for i in range(mod.I):
             yi = torch.stack([mod.y[i].rsample().detach() for b in range(10)])
             plt.hist(yi.mean(0)[mod.m[i]].numpy())
-            plt.savefig('{}/y{}_imputed_hist.pdf'.format(path_to_exp_results, i + 1))
+            plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
 
         # Plot sig
         sig = torch.stack([p['sig'] for p in post]).detach().numpy()
         plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.xlabel('$\sigma$', fontsize=15)
-        plt.savefig('{}/sig.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/sig.pdf'.format(img_dir))
         plt.close()
 
         # sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
@@ -217,7 +199,7 @@ if __name__ == '__main__':
         plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.ylabel('$v$', rotation=0, labelpad=15)
         plt.tight_layout()
-        plt.savefig('{}/W_v.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/W_v.pdf'.format(img_dir))
         plt.close()
 
 
@@ -228,20 +210,20 @@ if __name__ == '__main__':
         for i in range(mod.I):
             plt.plot(W_trace[:, i, :])
             plt.title('w trace i={}'.format(i+1))
-            plt.savefig('{}/W{}_trace.pdf'.format(path_to_exp_results, i+1))
+            plt.savefig('{}/W{}_trace.pdf'.format(img_dir, i+1))
             plt.close()
 
         # Trace for v
         plt.plot(v_trace)
         plt.title('v trace')
-        plt.savefig('{}/v_trace.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/v_trace.pdf'.format(img_dir))
         plt.close()
 
         # Plot sig mean trace
         sig_trace = torch.stack([t['sig'].dist().mean for t in out['trace']])
         plt.plot(sig_trace.detach().numpy()[2:])
         plt.title('sig trace')
-        plt.savefig('{}/sig_trace.pdf'.format(path_to_exp_results))
+        plt.savefig('{}/sig_trace.pdf'.format(img_dir))
         plt.close()
 
         # sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
@@ -257,39 +239,16 @@ if __name__ == '__main__':
         # plt.close()
 
         # lam posterior
-        # TODO: This is just a simple version
-        lam = [lam_post(mod) for b in range(30)]
+        lam = [lam_post.sample(mod) for b in range(30)]
         lam = [torch.stack([lam_b[i] for lam_b in lam]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
 
         W_mean = W.mean(0)
         Z_mean = Z.mean(0)
 
-        for i in range(I):
-            k_ord = W_mean[i, :].argsort()
-            z_cols = []
-            for k in k_ord.tolist():
-                if Z_mean[:, k].sum() > 0:
-                    z_cols.append(k)
-            z_cols = np.array(z_cols)
-            Z_hat = Z_mean[:, z_cols]
-            gs = gridspec.GridSpec(1, 2, width_ratios=[2, 5]) 
-            plt.subplot(gs[0])
-            plt.imshow(Z_hat, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
-            plt.colorbar()
-            plt.xticks(np.arange(len(z_cols)), z_cols + 1)
-            plt.yticks(np.arange(mod.J), np.arange(mod.J) + 1)
-            add_gridlines_Z(Z_hat)
-            lami_new, counts = relabel_lam(lam_est[i], W_mean[i, :])
-            counts_cumsum = np.cumsum(counts)
-            plt.subplot(gs[1])
-            yi = y[i][lami_new.argsort(), :].numpy().T
-            plt.imshow(yi, aspect='auto', vmin=VMIN, vmax=VMAX, cmap=cm)
-            for c in counts_cumsum[:-1]:
-                plt.axvline(c, color='yellow')
-            plt.colorbar()
-            plt.yticks([])
+        for i in range(mod.I):
+            plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.03)
             plt.tight_layout()
-            plt.savefig('{}/y{}_post.pdf'.format(path_to_exp_results, i + 1))
+            plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
             plt.close()
 

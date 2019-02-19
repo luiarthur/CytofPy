@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Normal
 from torch.distributions import Categorical
 
-def lam_post(mod):
+def sample(mod):
     lam = []
     for i in range(mod.I):
         W = mod.W.rsample().detach()
@@ -44,4 +44,3 @@ def lam_post(mod):
         lam.append(Categorical(lam_probs).sample())
 
     return lam
-
