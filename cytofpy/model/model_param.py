@@ -13,11 +13,25 @@ torch.set_default_dtype(torch.float64)
 # Stick break transform function
 sbt = StickBreakingTransform(0)
 
-def has_constraint(prior, constraint):
-    return isinstance(prior.support, type(constraint))
+# For checking constraints of model parameters
+def has_constraint(support, constraint):
+    return isinstance(support, type(constraint))
+
+def is_unit_interval(support):
+    return has_constraint(support, constraints.unit_interval)
+
+def is_positive(support):
+    return has_constraint(support, constraints.positive)
+
+def is_simplex(support):
+    return has_constraint(support, constraints.simplex)
+
+def is_real(support):
+    return has_constraint(support, constraints.real)
+
 
 class ModelParam(abc.ABC):
-    def __init__(self, size, prior, m=None, log_s=None):
+    def __init__(self, size, support, m=None, log_s=None):
         if m is None:
             m = torch.randn(size)
 
@@ -26,7 +40,7 @@ class ModelParam(abc.ABC):
 
         self.vp = torch.stack([m, log_s], requires_grad=True)
         self.size = size
-        self.prior = prior
+        self.support = support
 
     def dist(self):
         return Normal(self.vp[0], self.vp[1].exp())
@@ -35,42 +49,38 @@ class ModelParam(abc.ABC):
         return self.dist().rsample(n)
 
     def transform(self, real):
-        if has_constraint(self.prior, constraints.unit_interval):
+        if is_unit_interval(self.support)
             return real.sigmoid()
 
-        elif has_constraint(self.prior, constraints.simplex):
+        elif is_simplex(self.support):
             return sbt(real)
 
-        elif has_constraint(self.prior, constraints.positive):
+        elif is_positive(self.support):
             return real.exp()
 
-        elif has_constraint(self.prior, constraints.real):
+        elif is_real(self.support):
             return real
 
         else:
             NotImplemented
 
-    def log_prior_plus_logabsdetJ(self, real, param):
-        """
-        This is most likely to be overriden in cases where
-        the parameter is dependent on other parameters.
-        """
-        if has_constraint(self.prior, constraints.unit_interval):
+    def logabsdetJ(self, real, param):
+        if is_unit_interval(self.support):
             logabsdetJ = torch.log(param) + torch.log1p(-param)
 
-        elif has_constraint(self.prior, constraints.simplex):
+        elif is_simplex(self.support):
             logabsdetJ = sbt.log_abs_det_jacobian(real, param)
 
-        elif has_constraint(self.prior, constraints.positive):
+        elif is_positive(self.support):
             logabsdetJ = real
 
-        elif has_constraint(self.prior, constraints.real):
+        elif is_real(self.support):
             logabsdetJ = torch.zeros(0)
 
         else:
             NotImplemented
 
-        return self.prior.log_prob(param).sum() + logabsdetJ.sum()
+        return logabsdetJ.sum()
 
     def log_q(self, real):
         return self.dist().log_prob(real).sum()
@@ -98,16 +108,14 @@ class VI(abc.ABC):
         return [mp.vp for mp in mp.values()]
 
     @abc.abstractmethod
-    def loglike(self, data, params):
+    def loglike(self, data, params, misc=None):
         pass
 
-    def log_prior(self, reals, params):
-        out = 0.0
-        for key in reals:
-            out += self.mp[key].log_prior(reals[key], params[key])
-        return out
+    @abc.abstractmethod
+    def log_prior(self, reals, params, misc=None):
+        pass
 
-    def log_q(self, reals):
+    def log_q(self, reals, misc=None):
         out = 0.0
         for key in reals:
             out += self.mp[key].log_q(reals[key])
@@ -128,6 +136,6 @@ class VI(abc.ABC):
     def compute_elbo(self, data):
         reals = self.sample_reals()
         params = self.transform(reals)
-        elbo = self.loglike(data, params) + log_prior(params, reals)
-        elbo -= log_q(reals)
+        elbo = self.loglike(data, params) + self.log_prior(params, reals)
+        elbo -= self.log_q(reals)
         return elbo
