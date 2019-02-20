@@ -78,9 +78,9 @@ if __name__ == '__main__':
     L = [5, 3]
 
     # model.debug=True
-    y_bounds = [-5., -4.7, -2.]
+    y_bounds = [-6., -4., -2.]
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          y_bounds=y_bounds, p_bounds=[.01, .5, .01])
+                                          y_bounds=y_bounds, p_bounds=[.01, .9, .01])
                                           # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                           # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .1)
@@ -100,7 +100,7 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(img_dir, i+1, j+1))
             plt.close()
 
-    out = cytofpy.model.fit(y, max_iter=100, lr=1e-2, print_freq=10, eps=1e-6,
+    out = cytofpy.model.fit(y, max_iter=100, lr=1e-4, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=3000, tau=0.1,
                            trace_every=50, backup_every=10,
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
     out = out['model']
     max_iter = 20000
-    out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
+    out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-4, print_freq=10, eps=1e-6,
                            y_mean_init=y_bounds[1], y_sd_init=0.1,
                            priors=priors, minibatch_size=1000, tau=0.1,
                            trace_every=max_iter/50, backup_every=50,
