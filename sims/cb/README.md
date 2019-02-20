@@ -21,3 +21,6 @@ no matter what I did. I changed it back to float.
 
 Perhaps this has something to do with gradients of `rsamples`. Perhaps
 with double and my advi models, the stability is best. IDK.
+
+This is solved. With double precision and a smaller learning rate, the
+gradients and elbo are numerically stable.
