@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import torch
 from torch.distributions import Normal
 from torch.distributions import constraints
-
 from torch.distributions.transforms import StickBreakingTransform
+from torch.nn import Parameter
 
 # Set default type to float64 (instead of float32)
 torch.set_default_dtype(torch.float64)
@@ -14,21 +14,20 @@ torch.set_default_dtype(torch.float64)
 sbt = StickBreakingTransform(0)
 
 # For checking constraints of model parameters
-def has_constraint(support, constraint):
-    return isinstance(support, type(constraint))
-
 def is_unit_interval(support):
-    return has_constraint(support, constraints.unit_interval)
+    return support == 'unit_interval'
 
 def is_positive(support):
-    return has_constraint(support, constraints.positive)
+    return support == 'positive'
 
 def is_simplex(support):
-    return has_constraint(support, constraints.simplex)
+    return support == 'simplex'
 
 def is_real(support):
-    return has_constraint(support, constraints.real)
+    return support == 'real'
 
+
+# TODO: Write a ModelParamList
 
 class ModelParam(abc.ABC):
     def __init__(self, size, support, m=None, log_s=None):
@@ -38,7 +37,7 @@ class ModelParam(abc.ABC):
         if log_s is None:
             log_s = torch.randn(size)
 
-        self.vp = torch.stack([m, log_s], requires_grad=True)
+        self.vp = torch.nn.Parameter(torch.stack([m, log_s]))
         self.size = size
         self.support = support
 
@@ -49,7 +48,7 @@ class ModelParam(abc.ABC):
         return self.dist().rsample(n)
 
     def transform(self, real):
-        if is_unit_interval(self.support)
+        if is_unit_interval(self.support):
             return real.sigmoid()
 
         elif is_simplex(self.support):
@@ -85,7 +84,6 @@ class ModelParam(abc.ABC):
     def log_q(self, real):
         return self.dist().log_prob(real).sum()
 
-
 # TODO: ADD TESTS
 # from torch.distributions import Gamma, Normal, Beta, Uniform, Dirichlet
 # x = Param(1, Gamma(2,3))
@@ -100,12 +98,18 @@ class ModelParam(abc.ABC):
 # 
 # x.log_q(x.real_sample())
 
-class VI(abc.ABC):
+class VI(torch.nn.Module):
     def __init__(self):
-        self.mp = {}
+        assert(hasattr(self, 'mp'))
 
-    def vp_list(self):
-        return [mp.vp for mp in mp.values()]
+        # Call parent's init
+        super(VI, self).__init__()
+
+        # Register variational parameters
+        for key in self.mp:
+            mp = self.mp[key]
+            if issubclass(type(mp), ModelParam):
+                self.__setattr__(key + '_vp', mp.vp)
 
     @abc.abstractmethod
     def loglike(self, data, params, misc=None):
@@ -133,9 +137,9 @@ class VI(abc.ABC):
             params[key] = self.mp[key].transform(reals[key])
         return params
  
-    def compute_elbo(self, data):
+    def forward(self, idx):
         reals = self.sample_reals()
         params = self.transform(reals)
-        elbo = self.loglike(data, params) + self.log_prior(params, reals)
+        elbo = self.loglike(idx, params) + self.log_prior(params, reals)
         elbo -= self.log_q(reals)
         return elbo

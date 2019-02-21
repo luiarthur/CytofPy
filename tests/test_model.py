@@ -29,7 +29,7 @@ class Test_ModelRuns(unittest.TestCase):
         I = len(y)
 
         K = 10
-        L = [2, 2]
+        L = [3, 3]
 
         # model.debug=True
         priors = cytofpy.model.default_priors(y, K=K, L=L, y_bounds=[-5., -3.5, -2.])

@@ -75,12 +75,12 @@ if __name__ == '__main__':
         plt.close()
 
     K = 10
-    L = [5, 3]
+    L = [5, 5]
 
     # model.debug=True
     y_bounds = [-6., -4., -2.]
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          y_bounds=y_bounds, p_bounds=[.01, .9, .01])
+                                          y_bounds=y_bounds, p_bounds=[.01, .5, .01])
                                           # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                           # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .1)
@@ -100,19 +100,19 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(img_dir, i+1, j+1))
             plt.close()
 
-    out = cytofpy.model.fit(y, max_iter=100, lr=1e-4, print_freq=10, eps=1e-6,
-                           y_mean_init=y_bounds[1], y_sd_init=0.1,
-                           priors=priors, minibatch_size=3000, tau=0.1,
-                           trace_every=50, backup_every=10,
-                           verbose=0, seed=1)
+    out = cytofpy.model.fit(y, max_iter=100, lr=1e-2, print_freq=10, eps=1e-6,
+                            y_mean_init=y_bounds[1], y_sd_init=0.1,
+                            priors=priors, minibatch_size=3000, tau=0.1,
+                            trace_every=50, backup_every=10,
+                            verbose=0, seed=1)
 
-    out = out['model']
+    out = out['mp']
     max_iter = 20000
-    out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-4, print_freq=10, eps=1e-6,
-                           y_mean_init=y_bounds[1], y_sd_init=0.1,
-                           priors=priors, minibatch_size=1000, tau=0.1,
-                           trace_every=max_iter/50, backup_every=50,
-                           init=out, verbose=0, seed=1)
+    out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
+                            y_mean_init=y_bounds[1], y_sd_init=0.1,
+                            priors=priors, minibatch_size=1000, tau=0.1,
+                            trace_every=max_iter/50, backup_every=50,
+                            init_mp=out, verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
@@ -123,7 +123,8 @@ if __name__ == '__main__':
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
         elbo = out['elbo']
-        mod = out['model']
+        mod = cytofpy.model.Model(y=y, priors=priors, tau=out['tau'])
+        mod.mp = out['mp']
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
@@ -160,7 +161,7 @@ if __name__ == '__main__':
         # y0
         # FIXME: the observed y's are being changed!
         for i in range(mod.I):
-            yi = torch.stack([mod.y[i].rsample().detach() for b in range(10)])
+            yi = torch.stack([mod.mp['y'][i].real_sample().detach() for b in range(10)])
             plt.hist(yi.mean(0)[mod.m[i]].numpy())
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()

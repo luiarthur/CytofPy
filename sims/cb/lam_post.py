@@ -4,22 +4,23 @@ from torch.distributions import Categorical
 
 def sample(mod):
     lam = []
+
+    idx = [range(mod.N[i]) for i in range(mod.I)]
+    params = mod.sample_params(idx)
+    mu0 = params['delta0'].cumsum(0).detach()
+    mu1 = params['delta1'].cumsum(0).detach()
+    eta0 = params['eta0'].detach()
+    eta1 = params['eta1'].detach()
+    sig = params['sig'].detach()
+    H = params['H'].detach()
+    v = params['v'].detach()
+    # TODO: USE in STICK-BREAKING IBP
+    # Z = (v.cumprod(0) > Normal(0, 1).cdf(H)).double()
+    Z = (v > Normal(0, 1).cdf(H)).double()
+    W = params['W'].detach()
+
     for i in range(mod.I):
-        W = mod.W.rsample().detach()
-        H = mod.H.rsample().detach()
-        v = mod.v.rsample().detach()
-        Z = (v.cumprod(0) > torch.distributions.Normal(0, 1).cdf(H))
-        Z = Z.double()
-        eta0 = mod.eta0.rsample().detach()
-        eta1 = mod.eta1.rsample().detach()
-        mu0 = -mod.delta0.rsample().cumsum(0).detach()
-        mu1 =  mod.delta1.rsample().cumsum(0).detach()
-        # sig0 = mod.sig0.rsample().detach()
-        # sig1 = mod.sig1.rsample().detach()
-        sig = mod.sig.rsample().detach()
-        yi = mod.y[i].rsample().detach()
-
-
+        yi = params['y'][i].detach()
         # compute probs
         # d0 = Normal(mu0[None, None, :], sig0[None, None, :]).log_prob(yi[:, :, None])
         d0 = Normal(mu0[None, None, :], sig[i]).log_prob(yi[:, :, None])
