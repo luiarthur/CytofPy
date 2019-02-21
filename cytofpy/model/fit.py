@@ -17,7 +17,9 @@ def check_nan_in_grad(mp, key, fixed_grad, i=None):
 
     grad_isnan = torch.isnan(vp.grad)
     if grad_isnan.sum() > 0:
-        print("WARNING: Setting a nan gradient to zero in {}! idx: {}".format(key, grad_isnan.nonzero()))
+        print("WARNING: Setting a nan gradient to zero in {}!".format(key))
+        # print("WARNING: Setting a nan gradient to zero in {}! idx: {}".format(
+        #     key, grad_isnan.nonzero()))
         vp.grad[grad_isnan] = 0.0
         fixed_grad[0] = True
 
@@ -37,7 +39,7 @@ def update(opt, mod, idx):
                 check_nan_in_grad(mod.mp, key, fixed_grad)
 
     opt.step()
-    return elbo
+    return elbo, fixed_grad[0]
 
 def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         print_freq=10, seed=1, y_mean_init=-6.0, y_sd_init=0.5,
@@ -79,8 +81,9 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
             idx.append(idx_i)
 
         # Update Model parameters
-        elbo = update(optimizer, model, idx)
+        elbo, fixed_grad = update(optimizer, model, idx)
         elbo_hist.append(elbo.item())
+        elbo_good = not fixed_grad
 
         if t % print_freq == 0:
             print('{} | iteration: {}/{} | elbo: {}'.format(
@@ -93,7 +96,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         if backup_every > 0 and t % backup_every == 0 and elbo_good:
             best_mp = copy.deepcopy(model.mp)
 
-        if trace_every > 0 and t % trace_every == 0 and elbo_good: # and not repaired_grads:
+        if trace_every > 0 and t % trace_every == 0 and elbo_good:
             mp = {}
             for key in model.mp:
                 if key == 'y':

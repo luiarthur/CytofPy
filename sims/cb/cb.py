@@ -100,19 +100,19 @@ if __name__ == '__main__':
             plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(img_dir, i+1, j+1))
             plt.close()
 
-    out = cytofpy.model.fit(y, max_iter=100, lr=1e-2, print_freq=10, eps=1e-6,
+    out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
                             y_mean_init=y_bounds[1], y_sd_init=0.1,
                             priors=priors, minibatch_size=3000, tau=0.1,
-                            trace_every=50, backup_every=10,
+                            trace_every=50, backup_every=50,
                             verbose=0, seed=1)
 
-    out = out['mp']
-    max_iter = 20000
-    out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
-                            y_mean_init=y_bounds[1], y_sd_init=0.1,
-                            priors=priors, minibatch_size=1000, tau=0.1,
-                            trace_every=max_iter/50, backup_every=50,
-                            init_mp=out, verbose=0, seed=1)
+    # out = out['mp']
+    # max_iter = 5000
+    # out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
+    #                         y_mean_init=y_bounds[1], y_sd_init=0.1,
+    #                         priors=priors, minibatch_size=1000, tau=0.1,
+    #                         trace_every=max_iter/50, backup_every=50,
+    #                         init_mp=out, verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
@@ -139,7 +139,9 @@ if __name__ == '__main__':
         # Plot Z
         H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
         v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
+        # TODO: STICK BREAK IBP
         Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+        # Z = (v > torch.distributions.Normal(0, 1).cdf(H)).numpy()
         plt.imshow(Z.mean(0), aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
         plt.colorbar()

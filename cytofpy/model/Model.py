@@ -241,8 +241,8 @@ class Model(VI):
             # Ni x J x K
 
             # TODO: USE THIS FOR STICK-BREAKING IBP
-            # b_vec = params['v'].cumprod(0)
-            b_vec = params['v']
+            b_vec = params['v'].cumprod(0)
+            # b_vec = params['v']
             Z = compute_Z(b_vec[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
             c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
             d = c.sum(1)
@@ -300,12 +300,14 @@ class Model(VI):
                         out += lp_yi * fac
             elif key == 'v':
                 # TODO: USE STICK-BREAKING IBP
-                # out += Beta(params['alpha'], 1).log_prob(params['v'])
-                out += Beta(params['alpha'] / self.K, 1).log_prob(params['v']).sum()
-                out += self.mp[key].logabsdetJ(reals[key], params[key])
+                tmp = Beta(params['alpha'], 1).log_prob(params['v'])
+                # tmp = Beta(params['alpha'] / self.K, 1).log_prob(params['v'])
+                tmp += self.mp['v'].logabsdetJ(reals['v'], params['v'])
+                out += tmp.sum()
             else:
-                out += self.priors[key].log_prob(params[key]).sum()
-                out += self.mp[key].logabsdetJ(reals[key], params[key])
+                tmp = self.priors[key].log_prob(params[key])
+                tmp += self.mp[key].logabsdetJ(reals[key], params[key])
+                out += tmp.sum()
 
         if self.verbose >= 2:
             print('log_prior: {}'.format(out / self.Nsum))

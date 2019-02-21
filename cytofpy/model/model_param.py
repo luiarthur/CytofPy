@@ -74,12 +74,12 @@ class ModelParam(abc.ABC):
             logabsdetJ = real
 
         elif is_real(self.support):
-            logabsdetJ = torch.zeros(0)
+            logabsdetJ = 0.0
 
         else:
             NotImplemented
 
-        return logabsdetJ.sum()
+        return logabsdetJ
 
     def log_q(self, real):
         return self.dist().log_prob(real).sum()

@@ -7,7 +7,7 @@ def sample(mod):
 
     idx = [range(mod.N[i]) for i in range(mod.I)]
     params = mod.sample_params(idx)
-    mu0 = params['delta0'].cumsum(0).detach()
+    mu0 = -params['delta0'].cumsum(0).detach()
     mu1 = params['delta1'].cumsum(0).detach()
     eta0 = params['eta0'].detach()
     eta1 = params['eta1'].detach()
@@ -15,8 +15,8 @@ def sample(mod):
     H = params['H'].detach()
     v = params['v'].detach()
     # TODO: USE in STICK-BREAKING IBP
-    # Z = (v.cumprod(0) > Normal(0, 1).cdf(H)).double()
-    Z = (v > Normal(0, 1).cdf(H)).double()
+    Z = (v.cumprod(0) > Normal(0, 1).cdf(H)).double()
+    # Z = (v > Normal(0, 1).cdf(H)).double()
     W = params['W'].detach()
 
     for i in range(mod.I):
