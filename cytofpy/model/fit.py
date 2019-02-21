@@ -32,7 +32,8 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     m = [torch.isnan(yi) for yi in y]
 
     if init is None:
-        model = Model(y=y, m=m, priors=priors, tau=tau, verbose=verbose)
+        model = Model(y=y, m=m, priors=priors, tau=tau,
+                      y_mean_init=y_mean_init, y_sd_init=y_sd_int, verbose=verbose)
     else:
         model = init
 
