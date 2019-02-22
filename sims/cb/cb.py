@@ -75,8 +75,8 @@ if __name__ == '__main__':
         plt.savefig('{}/y{}.pdf'.format(img_dir, i + 1))
         plt.close()
 
-    K = 20
-    L = [5, 5]
+    K = 30
+    L = [5, 3]
 
     # model.debug=True
     y_bounds = [-6., -4., -2.]
@@ -102,19 +102,11 @@ if __name__ == '__main__':
             plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
+        out = cytofpy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
                                 priors=priors, minibatch_size=3000, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=1)
-
-    # out = out['mp']
-    # max_iter = 5000
-    # out = cytofpy.model.fit(y, max_iter=max_iter, lr=1e-2, print_freq=10, eps=1e-6,
-    #                         y_mean_init=y_bounds[1], y_sd_init=0.1,
-    #                         priors=priors, minibatch_size=1000, tau=0.1,
-    #                         trace_every=max_iter/50, backup_every=50,
-    #                         init_mp=out, verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
