@@ -76,7 +76,7 @@ if __name__ == '__main__':
         plt.close()
 
     K = 30
-    L = [5, 3]
+    L = [5, 5]
 
     # model.debug=True
     y_bounds = [-6., -4., -2.]
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
-                                priors=priors, minibatch_size=3000, tau=0.1,
+                                priors=priors, minibatch_size=5000, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=1)
 
