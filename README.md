@@ -1,6 +1,6 @@
 # CytofPy
 Implementation of Cytof model using Automatic Differentiation Variational
-Inference (ADVI) using PyTorch.
+Inference (ADVI) and PyTorch.
 
 # References
 
