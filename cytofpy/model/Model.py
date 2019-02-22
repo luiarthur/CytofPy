@@ -2,11 +2,12 @@ import copy
 import math
 
 import torch
-from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
+
 from torch.distributions.log_normal import LogNormal
-from torch.distributions.kl import kl_divergence as kld
-from cytofpy.model.vardist import VDGamma, VDNormal, VDBeta, VDDirichlet, VDLogNormal, VI
-from torch.nn import Parameter, ParameterList
+from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
+from torch.nn import ParameterList
+
+from cytofpy.model.model_param import ModelParam, VI
 
 import numpy as np
 
@@ -90,12 +91,9 @@ def default_priors(y, K:int=30, L=None,
             'delta0': Gamma(1, 1),
             'delta1': Gamma(1, 1),
             #
-            # 'sig0': LogNormal(-1, .1),
-            # 'sig1': LogNormal(-1, .1),
-            # 'sig0': Beta(1, 10),
-            # 'sig1': Beta(1, 10),
-            'sig': LogNormal(-1, .1),
-            # 'sig': Gamma(1, 1),
+            'sig0': LogNormal(0, 1),
+            'sig1': LogNormal(0, 1),
+            # 'sig': LogNormal(0, 1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
@@ -109,7 +107,7 @@ def default_priors(y, K:int=30, L=None,
             #
             'W': Dirichlet(torch.ones(K) / K)}
 
-def initialize_y_vd(y, m=None, mean_init=-4.0, sd_init=0.5):
+def init_y_mp(y, m=None, mean_init=-4.0, sd_init=0.5):
     """
     make sure to zero the gradients for observed y
     """
@@ -131,9 +129,10 @@ def initialize_y_vd(y, m=None, mean_init=-4.0, sd_init=0.5):
         # Set log_sd for missing y to log(sd_init)
         y_vp_log_s_init[i][m[i]] = math.log(sd_init)
 
-    y_vd = [VDNormal(y[i].shape, y_vp_m_init[i], y_vp_log_s_init[i]) for i in range(I)]
+    y_mp = [ModelParam(y[i].shape, 'real', m=y_vp_m_init[i], log_s=y_vp_log_s_init[i])
+            for i in range(I)]
 
-    return y_vd
+    return y_mp
 
 
 class Model(VI):
@@ -161,38 +160,48 @@ class Model(VI):
         # Store priors
         self.priors = priors
 
-        # Assign variational distributions
-        self.delta0 = VDGamma(self.L[0])
-        self.delta1 = VDGamma(self.L[1])
-        # self.sig0 = VDLogNormal(self.L[0])
-        # self.sig1 = VDLogNormal(self.L[1])
-        # self.sig0 = VDBeta(self.L[0])
-        # self.sig1 = VDBeta(self.L[1])
-        self.sig = VDLogNormal(self.I)
-        # self.sig = VDGamma(self.I)
-        self.eta0 = VDDirichlet((self.I, self.J, self.L[0]))
-        self.eta1 = VDDirichlet((self.I, self.J, self.L[1]))
-        self.W = VDDirichlet((self.I, self.K))
-        self.alpha = VDGamma(1)
-        self.v = VDBeta(self.K)
-        self.H = VDNormal((self.J, self.K))
-
-        # This must be done after assigning variational distributions
-        super(Model, self).__init__()
-
         # Register m
-        self.m = [torch.isnan(yi) for yi in y]
+        if m is None:
+            self.m = [torch.isnan(yi) for yi in y]
+        else:
+            self.m = m
+
         self.msum = [mi.sum() for mi in self.m]
 
-        # Record the variational distribution for y
-        self.y = initialize_y_vd(y=y, m=m, mean_init=y_mean_init, sd_init=y_sd_init)
-        self.vd['y'] = self.y
-        # Register Variational Parameters for y
-        self.y_vp = ParameterList(self.y[i].vp for i in range(self.I))
-        
+        ### Assign Model Parameters###
+        self.mp = {}
+        self.mp['delta0'] = ModelParam(self.L[0], 'positive')
+        self.mp['delta1'] = ModelParam(self.L[1], 'positive')
 
-    def loglike(self, data, params):
-        idx = data['idx']
+        self.mp['sig0'] = ModelParam(self.L[0], 'positive')
+        self.mp['sig1'] = ModelParam(self.L[1], 'positive')
+        # self.mp['sig'] = ModelParam(self.I, 'positive')
+
+        self.mp['eta0'] = ModelParam((self.I, self.J, self.L[0] - 1), 'simplex')
+        self.mp['eta1'] = ModelParam((self.I, self.J, self.L[1] - 1), 'simplex')
+        self.mp['W'] = ModelParam((self.I, self.K - 1), 'simplex')
+        self.mp['alpha'] = ModelParam(1, 'positive')
+        self.mp['v'] = ModelParam(self.K, 'unit_interval')
+        self.mp['H'] = ModelParam((self.J, self.K), 'real')
+        self.mp['y'] = init_y_mp(y=y, m=self.m, mean_init=y_mean_init, sd_init=y_sd_init)
+        ### END OF Assign Model Parameters###
+
+        # This must be done after assigning model parameters
+        super(Model, self).__init__()
+        self.y_vp = ParameterList(mp_yi.vp for mp_yi in self.mp['y'])
+        
+    def vp_list(self):
+        vp = []
+        for key in self.mp:
+            if key == 'y':
+                for yi in self.mp['y']:
+                    vp.append(yi.vp)
+            else:
+                vp.append(self.mp[key].vp)
+
+        return vp
+
+    def loglike(self, params, idx):
         y = params['y']
         m = [self.m[i][idx[i], :] for i in range(self.I)]
 
@@ -205,14 +214,14 @@ class Model(VI):
             # Ni x J x Lz
             mu0 = -params['delta0'].cumsum(0)
             d0 = Normal(mu0[None, None, :],
-                        params['sig'][i]).log_prob(y[i][:, :, None])
-                        # params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
+                        # params['sig'][i]).log_prob(y[i][:, :, None])
+                        params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
 
             mu1 = params['delta1'].cumsum(0)
             d1 = Normal(mu1[None, None, :],
-                        params['sig'][i]).log_prob(y[i][:, :, None])
-                        # params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
+                        # params['sig'][i]).log_prob(y[i][:, :, None])
+                        params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
             
             # Ni x J
@@ -226,7 +235,9 @@ class Model(VI):
             # d: Ni x K
             # Ni x J x K
 
+            # TODO: USE THIS FOR STICK-BREAKING IBP
             b_vec = params['v'].cumprod(0)
+            # b_vec = params['v']
             Z = compute_Z(b_vec[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
             c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
             d = c.sum(1)
@@ -245,66 +256,102 @@ class Model(VI):
 
         return ll
 
-    def kl_qp(self, params, idx):
-        res = 0.0
-
-        for key in params:
-            if key == 'v':
-                res += kld(self.vd['v'].dist(), Beta(params['alpha'], 1)).sum()
-            elif key == 'y':
+    def log_q(self, reals, idx):
+        out = 0.0
+        for key in reals:
+            if key == 'y':
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :]
-
                     if mi.sum() > 0:
-                        y_vp_m = self.y_vp[i][0, idx[i], :][mi]
-                        y_vp_s = self.y_vp[i][1, idx[i], :][mi].exp()
-                        yi = params['y'][i]
+                        y_vp_m = self.mp['y'][i].vp[0, idx[i], :][mi]
+                        y_vp_s = self.mp['y'][i].vp[1, idx[i], :][mi].exp()
+                        yi = reals['y'][i]
+                        lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).mean()
 
-                        pm_i = prob_miss(yi,
+                        fac = self.msum[i] 
+                        out += lq_yi * fac
+            else:
+                out += self.mp[key].log_q(reals[key])
+
+        if self.verbose >= 2:
+            print('log_q: {}'.format(out / self.Nsum))
+
+        return out / self.Nsum
+
+    def log_prior(self, reals, params, idx):
+        out = 0.0
+        for key in reals:
+            if key == 'y':
+                for i in range(self.I):
+                    mi = self.m[i][idx[i], :]
+                    if mi.sum() > 0:
+                        pm_i = prob_miss(reals['y'][i],
                                          self.b0[i:i+1, :],
                                          self.b1[i:i+1, :],
                                          self.b2[i:i+1, :])
-
-                        lq = Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).mean()
-                        lp = pm_i[mi].log().mean()
+                        lp_yi = pm_i[mi].log().mean()
 
                         fac = self.msum[i] 
-                        res += (lq - lp) * fac
+                        out += lp_yi * fac
+            elif key == 'v':
+                # TODO: USE STICK-BREAKING IBP
+                tmp = Beta(params['alpha'], 1).log_prob(params['v'])
+                # tmp = Beta(params['alpha'] / self.K, 1).log_prob(params['v'])
+                tmp += self.mp['v'].logabsdetJ(reals['v'], params['v'])
+                out += tmp.sum()
             else:
-                # NOTE: self.vd refers to the variational distributions object
-                res += kld(self.vd[key].dist(), self.priors[key]).sum()
-
-            # DEBUG
-            # if torch.isnan(res).sum() > 0:
-            #     print('nan for key: {}'.format(key))
-            #     print('mi.sum(): {}'.format(mi.sum()))
-            #     print(params[key])
+                tmp = self.priors[key].log_prob(params[key])
+                tmp += self.mp[key].logabsdetJ(reals[key], params[key])
+                out += tmp.sum()
 
         if self.verbose >= 2:
-            print('kl_qp: {}'.format(res / self.Nsum))
+            print('log_prior: {}'.format(out / self.Nsum))
 
-        return res / self.Nsum
+        return out / self.Nsum
 
-    def sample_params(self, idx):
-        params = {}
-        for key in self.vd:
+    def sample_reals(self, idx):
+        reals = {}
+        for key in self.mp:
             if key == 'y':
-                params['y'] = []
+                reals['y'] = []
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :].double()
-                    yi_vp = self.y_vp[i][:, idx[i], :]
+                    yi_vp = self.mp['y'][i].vp[:, idx[i], :]
                     yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
                     # NOTE: A trick to prevent computation of gradients for
                     #       observed values
                     yi = mi * yi + (1 - mi) * yi.detach()
-                    params['y'].append(yi)
+                    reals['y'].append(yi)
             else:
-                params[key] = self.vd[key].rsample()
+                reals[key] = self.mp[key].real_sample()
+                if self.mp[key].support in ['simplex', 'unit_interval']:
+                    # NOTE: This prevents nan's in elbo and gradients.
+                    #       This should not influence inference.
+                    reals[key] = reals[key].clamp(min=-20, max=20)
+                    if self.verbose >= 2:
+                        print('WARNING: Clamping real {} to have magnitude of 20!'.format(key))
 
+        return reals
+
+    def transform(self, reals):
+        params = {}
+        for key in self.mp:
+            if key == 'y':
+                params['y'] = reals['y']
+            else:
+                params[key] = self.mp[key].transform(reals[key])
         return params
 
-    def forward(self, data):
-        idx = data['idx']
-        params = self.sample_params(idx)
-        elbo = self.loglike(data, params) - self.kl_qp(params, idx)
+    def sample_params(self, idx):
+        """
+        used for post processing
+        """
+        reals = self.sample_reals(idx)
+        return self.transform(reals)
+
+    def forward(self, idx):
+        reals = self.sample_reals(idx)
+        params = self.transform(reals)
+        elbo = self.loglike(params, idx) + self.log_prior(reals, params, idx)
+        elbo -= self.log_q(reals, idx)
         return elbo
