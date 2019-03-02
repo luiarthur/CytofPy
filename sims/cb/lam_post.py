@@ -11,9 +11,9 @@ def sample(mod):
     mu1 = params['delta1'].cumsum(0).detach()
     eta0 = params['eta0'].detach()
     eta1 = params['eta1'].detach()
-    # sig = params['sig'].detach()
-    sig0 = params['sig0'].detach()
-    sig1 = params['sig1'].detach()
+    sig = params['sig'].detach()
+    # sig0 = params['sig0'].detach()
+    # sig1 = params['sig1'].detach()
     H = params['H'].detach()
     v = params['v'].detach()
     # TODO: USE in STICK-BREAKING IBP
@@ -24,12 +24,12 @@ def sample(mod):
     for i in range(mod.I):
         yi = params['y'][i].detach()
         # compute probs
-        d0 = Normal(mu0[None, None, :], sig0[None, None, :]).log_prob(yi[:, :, None])
-        # d0 = Normal(mu0[None, None, :], sig[i]).log_prob(yi[:, :, None])
+        # d0 = Normal(mu0[None, None, :], sig0[None, None, :]).log_prob(yi[:, :, None])
+        d0 = Normal(mu0[None, None, :], sig[i]).log_prob(yi[:, :, None])
         d0 += eta0[i:i+1, :, :].log()
 
-        d1 = Normal(mu1[None, None, :], sig1[None, None, :]).log_prob(yi[:, :, None])
-        # d1 = Normal(mu1[None, None, :], sig[i]).log_prob(yi[:, :, None])
+        # d1 = Normal(mu1[None, None, :], sig1[None, None, :]).log_prob(yi[:, :, None])
+        d1 = Normal(mu1[None, None, :], sig[i]).log_prob(yi[:, :, None])
         d1 += eta1[i:i+1, :, :].log()
 
         # Ni x J

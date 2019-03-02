@@ -163,23 +163,23 @@ if __name__ == '__main__':
             plt.close()
 
         # Plot sig
-        # sig = torch.stack([p['sig'] for p in post]).detach().numpy()
-        # plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        # plt.xlabel('$\sigma$', fontsize=15)
-        # plt.savefig('{}/sig.pdf'.format(img_dir))
+        sig = torch.stack([p['sig'] for p in post]).detach().numpy()
+        plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.xlabel('$\sigma$', fontsize=15)
+        plt.savefig('{}/sig.pdf'.format(img_dir))
+        plt.close()
+
+        # sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
+        # plt.boxplot(sig0[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        # plt.xlabel('$\sigma$0', fontsize=15)
+        # plt.savefig('{}/sig0.pdf'.format(img_dir))
         # plt.close()
 
-        sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
-        plt.boxplot(sig0[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        plt.xlabel('$\sigma$0', fontsize=15)
-        plt.savefig('{}/sig0.pdf'.format(img_dir))
-        plt.close()
-
-        sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
-        plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        plt.xlabel('$\sigma$1', fontsize=15)
-        plt.savefig('{}/sig1.pdf'.format(img_dir))
-        plt.close()
+        # sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
+        # plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        # plt.xlabel('$\sigma$1', fontsize=15)
+        # plt.savefig('{}/sig1.pdf'.format(img_dir))
+        # plt.close()
 
         # Plot W, v
         W = torch.stack([p['W'] for p in post]).detach().numpy()
@@ -227,23 +227,23 @@ if __name__ == '__main__':
         plt.close()
 
         # Plot sig mean trace
-        # sig_trace = torch.stack([t['sig'].dist().mean for t in out['trace']])
-        # plt.plot(sig_trace.detach().numpy()[2:])
-        # plt.title('sig trace')
-        # plt.savefig('{}/sig_trace.pdf'.format(img_dir))
+        sig_trace = torch.stack([t['sig'].dist().mean for t in out['trace']])
+        plt.plot(sig_trace.detach().numpy()[2:])
+        plt.title('sig trace')
+        plt.savefig('{}/sig_trace.pdf'.format(img_dir))
+        plt.close()
+
+        # sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
+        # plt.plot(sig0_trace.detach().numpy()[2:])
+        # plt.title('sig0 trace')
+        # plt.savefig('{}/sig0_trace.pdf'.format(img_dir))
         # plt.close()
 
-        sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
-        plt.plot(sig0_trace.detach().numpy()[2:])
-        plt.title('sig0 trace')
-        plt.savefig('{}/sig0_trace.pdf'.format(img_dir))
-        plt.close()
-
-        sig1_trace = torch.stack([t['sig1'].dist().mean for t in out['trace']])
-        plt.plot(sig1_trace.detach().numpy()[2:])
-        plt.title('sig1 trace')
-        plt.savefig('{}/sig1_trace.pdf'.format(img_dir))
-        plt.close()
+        # sig1_trace = torch.stack([t['sig1'].dist().mean for t in out['trace']])
+        # plt.plot(sig1_trace.detach().numpy()[2:])
+        # plt.title('sig1 trace')
+        # plt.savefig('{}/sig1_trace.pdf'.format(img_dir))
+        # plt.close()
 
         # lam posterior
         lam = [lam_post.sample(mod) for b in range(30)]

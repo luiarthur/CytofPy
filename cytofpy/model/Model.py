@@ -91,9 +91,9 @@ def default_priors(y, K:int=30, L=None,
             'delta0': Gamma(1, 1),
             'delta1': Gamma(1, 1),
             #
-            'sig0': LogNormal(0, 1),
-            'sig1': LogNormal(0, 1),
-            # 'sig': LogNormal(0, 1),
+            # 'sig0': LogNormal(0, 1),
+            # 'sig1': LogNormal(0, 1),
+            'sig': LogNormal(0, 1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
@@ -173,9 +173,9 @@ class Model(VI):
         self.mp['delta0'] = ModelParam(self.L[0], 'positive')
         self.mp['delta1'] = ModelParam(self.L[1], 'positive')
 
-        self.mp['sig0'] = ModelParam(self.L[0], 'positive')
-        self.mp['sig1'] = ModelParam(self.L[1], 'positive')
-        # self.mp['sig'] = ModelParam(self.I, 'positive')
+        # self.mp['sig0'] = ModelParam(self.L[0], 'positive')
+        # self.mp['sig1'] = ModelParam(self.L[1], 'positive')
+        self.mp['sig'] = ModelParam(self.I, 'positive')
 
         self.mp['eta0'] = ModelParam((self.I, self.J, self.L[0] - 1), 'simplex')
         self.mp['eta1'] = ModelParam((self.I, self.J, self.L[1] - 1), 'simplex')
@@ -214,14 +214,14 @@ class Model(VI):
             # Ni x J x Lz
             mu0 = -params['delta0'].cumsum(0)
             d0 = Normal(mu0[None, None, :],
-                        # params['sig'][i]).log_prob(y[i][:, :, None])
-                        params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
+                        params['sig'][i]).log_prob(y[i][:, :, None])
+                        # params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
 
             mu1 = params['delta1'].cumsum(0)
             d1 = Normal(mu1[None, None, :],
-                        # params['sig'][i]).log_prob(y[i][:, :, None])
-                        params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
+                        params['sig'][i]).log_prob(y[i][:, :, None])
+                        # params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
             
             # Ni x J
