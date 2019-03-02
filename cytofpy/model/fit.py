@@ -71,7 +71,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     trace = []
 
     elbo_good = True
-    for t in range(max_iter):
+    for t in range(max_iter + 1):
         # DEBUG
         # if model.Nsum > 10000:
         #     print(model.y_vp[2][:, 4264, :])

@@ -1,4 +1,6 @@
+import sys
 import os
+
 import torch
 from torch.distributions.log_normal import LogNormal
 from torch.distributions import Gamma
@@ -18,14 +20,11 @@ import pickle
 # Use smaller learning rate, with double precision
 # https://discuss.pytorch.org/t/why-double-precision-training-sometimes-performs-much-better/31194
 
-
-
 if __name__ == '__main__':
     torch.set_num_threads(1)
 
-    path_to_exp_results = 'results/test/'
+    path_to_exp_results = sys.argv[1]
     img_dir = path_to_exp_results + 'img/'
-    os.makedirs(img_dir, exist_ok=True)
     os.makedirs('{}/pm/'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
 
@@ -102,7 +101,7 @@ if __name__ == '__main__':
             plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=1000, lr=1e-1, print_freq=10, eps=1e-6,
+        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
                                 priors=priors, minibatch_size=5000, tau=0.1,
                                 trace_every=50, backup_every=50,
@@ -259,3 +258,4 @@ if __name__ == '__main__':
             plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
             plt.close()
 
+    print("Done.")

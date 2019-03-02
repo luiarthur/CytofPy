@@ -1,8 +1,10 @@
 .PHONY: getData
 
+RESULTS_DIR = results/test/
+
 getData:
 	aws s3 cp s3://cytof-cb-data/cb.txt data/cb.txt
 
 run:
-	rm -f results/log.txt
-	python3 cb.py >> results/log.txt
+	mkdir -p $(RESULTS_DIR)
+	python3 cb.py $(RESULTS_DIR) > $(RESULTS_DIR)/log.txt
