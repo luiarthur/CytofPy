@@ -124,6 +124,12 @@ if __name__ == '__main__':
         plt.savefig('{}/elbo.pdf'.format(img_dir))
         plt.close()
 
+        tail = 1000
+        plt.plot(elbo[tail:])
+        plt.ylabel('ELBO / NSUM')
+        plt.savefig('{}/elbo_tail.pdf'.format(img_dir))
+        plt.close()
+
         # Posterior Inference
         B = 100
         idx = [np.random.choice(mod.N[i], 1) for i in range(mod.I)]
