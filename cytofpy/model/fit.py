@@ -78,8 +78,10 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
 
         idx = []
         for i in range(model.I):
-            replace = minibatch_size > model.N[i]
-            idx_i = np.random.choice(model.N[i], minibatch_size, replace=replace)
+            if minibatch_size > model.N[i]:
+                idx_i = np.arange(model.N[i])
+            else:
+                idx_i = np.random.choice(model.N[i], minibatch_size, replace=False)
             idx.append(idx_i)
 
         # Update Model parameters
