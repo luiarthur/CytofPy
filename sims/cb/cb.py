@@ -97,6 +97,7 @@ if __name__ == '__main__':
     y_peak = ygrid[pm[:, 0].argmax()]
     y_bounds = [None, y_peak, None]
     print('y peak: {}'.format(y_peak))
+
     # Plot prob miss for each (i, j)
     plt.figure()
     for i in range(priors['I']):
