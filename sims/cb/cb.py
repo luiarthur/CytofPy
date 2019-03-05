@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     path_to_exp_results = sys.argv[1]
     img_dir = path_to_exp_results + 'img/'
-    os.makedirs('{}/pm/'.format(img_dir), exist_ok=True)
+    os.makedirs('{}'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
 
     show_plots = False
@@ -78,27 +78,36 @@ if __name__ == '__main__':
     L = [5, 5]
 
     # model.debug=True
-    y_bounds = [-6., -4., -2.]
+    # y_bounds = [-6., -4., -2.]
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          y_bounds=y_bounds, p_bounds=[.01, .8, .01])
+                                          #y_bounds=y_bounds, p_bounds=[.01, .8, .01])
+                                          y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
                                           # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
                                           # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
     priors['sig'] = LogNormal(-1, .1)
     priors['alpha'] = Gamma(.1, .1)
 
     # Missing Mechanism
-    ygrid = torch.arange(-8, 8, .1)
-    pm = cytofpy.model.prob_miss(ygrid[:, None, None],
-                                priors['b0'][None, :, :],
-                                priors['b1'][None, :, :],
-                                priors['b2'][None, :, :])
+    ygrid = torch.arange(-8, 1, .1)
+    pm = cytofpy.model.prob_miss(ygrid[:, None],
+                                 priors['b0'][None, :],
+                                 priors['b1'][None, :],
+                                 priors['b2'][None, :])
 
+    y_peak = ygrid[pm[:, 0].argmax()]
+    y_bounds = [None, y_peak, None]
+    print('y peak: {}'.format(y_peak))
     # Plot prob miss for each (i, j)
+    plt.figure()
     for i in range(priors['I']):
-        for j in range(priors['J']):
-            plt.plot(ygrid.numpy(), pm[:, i, j].numpy())
-            plt.savefig('{}/pm/pm_i{}_j{}.pdf'.format(img_dir, i+1, j+1))
-            plt.close()
+        plt.plot(ygrid.numpy(), pm[:, i].numpy(), label='i: {}'.format(i + 1))
+        plt.ylabel('prob. of missing')
+        plt.xlabel('y')
+
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('{}/prob_miss.pdf'.format(img_dir, i+1))
+    plt.close()
 
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,

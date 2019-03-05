@@ -46,9 +46,9 @@ def solve_beta(y, p):
 # solve_beta(np.array([-5.0, -3.0, -1.0]), np.array([.05, .8 , .05]))
 # exact: -8.35785565, -6.49610001, -1.08268334
 
-def gen_beta_est(y_ij, y_quantiles, p_bounds):
-    yij_neg = y_ij[y_ij < 0]
-    y_bounds = np.percentile(yij_neg.numpy(), y_quantiles)
+def gen_beta_est(yi, y_quantiles, p_bounds):
+    yi_neg = yi[yi < 0]
+    y_bounds = np.percentile(yi_neg.numpy(), y_quantiles)
     return solve_beta(y_bounds, p_bounds)
 
 # TODO: Put this test in tests/
@@ -70,20 +70,19 @@ def default_priors(y, K:int=30, L=None,
     if L is None:
         L = [5, 5]
     
-    b0 = torch.zeros((I, J))
-    b1 = torch.zeros((I, J))
-    b2 = torch.zeros((I, J))
+    b0 = torch.zeros(I)
+    b1 = torch.zeros(I)
+    b2 = torch.zeros(I)
 
     for i in range(I):
-        for j in range(J):
-            if y_bounds is None:
-                beta = gen_beta_est(y[i][:, j], y_quantiles, p_bounds)
-            else:
-                beta = solve_beta(np.array(y_bounds), p_bounds)
+        if y_bounds is None:
+            beta = gen_beta_est(y[i].flatten(), y_quantiles, p_bounds)
+        else:
+            beta = solve_beta(np.array(y_bounds), p_bounds)
 
-            b0[i, j] = beta[0]
-            b1[i, j] = beta[1]
-            b2[i, j] = beta[2]
+        b0[i] = beta[0]
+        b1[i] = beta[1]
+        b2[i] = beta[2]
 
 
     return {'I': I, 'J': J, 'N': N, 'L': L, 'K': K,
@@ -93,7 +92,7 @@ def default_priors(y, K:int=30, L=None,
             #
             # 'sig0': LogNormal(0, 1),
             # 'sig1': LogNormal(0, 1),
-            'sig': LogNormal(0, 1),
+            'sig': LogNormal(-1, .1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
@@ -286,9 +285,9 @@ class Model(VI):
                     mi = self.m[i][idx[i], :]
                     if mi.sum() > 0:
                         pm_i = prob_miss(reals['y'][i],
-                                         self.b0[i:i+1, :],
-                                         self.b1[i:i+1, :],
-                                         self.b2[i:i+1, :])
+                                         self.b0[i],
+                                         self.b1[i],
+                                         self.b2[i])
                         lp_yi = pm_i[mi].log().mean()
 
                         fac = self.msum[i] 
