@@ -1,5 +1,5 @@
 SHELL:=/bin/bash
-.PHONY: getData test run clean
+.PHONY: getData test run clean retrieve retrieveAll
 
 # EXPERIMENT NAME
 EXP_NAME = sim1
@@ -22,3 +22,9 @@ test:
 
 clean:
 	rm -rf results
+
+retrieve: 
+	aws s3 sync $(AWS_BUCKET) $(RESULTS_DIR) --exclude "*/out.p*"
+
+retrieveAll:
+	aws s3 sync $(AWS_BUCKET) $(RESULTS_DIR)
