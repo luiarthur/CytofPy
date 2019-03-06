@@ -11,21 +11,21 @@ function engine() {
   local MAX_CORES=$5
   local STAGGER=$6
 
-  # OUTPUT directory
-  local OUTDIR=$RESULTS_DIR/$EXP_NAME
+  # Output directory for experiment
+  local EXP_DIR=$RESULTS_DIR/$EXP_NAME
 
   # Sync results to S3
-  syncToS3="aws s3 sync $OUTDIR $AWS_BUCKET/$EXP_NAME --exclude '*.nfs*'"
+  syncToS3="aws s3 sync $EXP_DIR $AWS_BUCKET/$EXP_NAME --exclude '*.nfs*'"
 
   # Remove output files to save space on cluster
-  rmOutput="rm -rf ${OUTDIR}"
+  rmOutput="rm -rf ${EXP_DIR}"
 
   # FOR DEBUGGING
   # syncToS3="echo"
   # rmOutput="echo"
 
   # BUNDLE OF COMMANDS TO EXECUTE
-  bundle_cmds="$cmd > $OUTDIR/log.txt && $syncToS3 && $rmOutput"
+  bundle_cmds="$cmd > $EXP_DIR/log.txt && $syncToS3 && $rmOutput"
   echo "Next job: $bundle_cmds"
   sem -j $MAX_CORES $bundle_cmds
 
