@@ -24,6 +24,7 @@ if __name__ == '__main__':
     torch.set_num_threads(1)
 
     path_to_exp_results = sys.argv[1]
+    SEED = int(sys.argv[2])
     img_dir = path_to_exp_results + 'img/'
     os.makedirs('{}'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
@@ -115,7 +116,7 @@ if __name__ == '__main__':
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
                                 priors=priors, minibatch_size=5000, tau=0.1,
                                 trace_every=50, backup_every=50,
-                                verbose=0, seed=1)
+                                verbose=0, seed=SEED)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
