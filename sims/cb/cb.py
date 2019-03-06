@@ -25,6 +25,8 @@ if __name__ == '__main__':
 
     path_to_exp_results = sys.argv[1]
     SEED = int(sys.argv[2])
+    subsample = .05
+
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
@@ -52,8 +54,17 @@ if __name__ == '__main__':
 
     # remove cells with expressions below -6
     cytofpy.util.preprocess(data, rm_cells_below=-6.0)
-    print(data['N'])
     y = copy.deepcopy(data['y'])
+
+    # Get a subsampmle of data
+    if 0 < subsample < 1:
+        for i in range(len(y)):
+            Ni = y[i].shape[0]
+            idx = np.random.choice(Ni, int(Ni * subsample), replace=False)
+            y[i] = y[i][idx, :]
+
+    # Print size of data
+    print('N: {}'.format([yi.shape[0] for yi in y]))
 
     # Color map
     cm_greys = plt.cm.get_cmap('Greys', 5)

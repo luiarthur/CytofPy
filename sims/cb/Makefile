@@ -2,13 +2,21 @@ SHELL:=/bin/bash
 .PHONY: getData test run clean retrieve retrieveAll
 
 # EXPERIMENT NAME
-EXP_NAME = sim1
+EXP_NAME = sim1-subsample
+
 # RESULTS DIRECTORY
 RESULTS_DIR = results/$(EXP_NAME)
+
 # AWS BUCKET
 AWS_BUCKET = s3://cytof-vb/cb/$(subst _,-,$(EXP_NAME))
+
 # TEST DIRECTORY
 TEST_DIR = $(RESULTS_DIR)/test/
+
+# OLD EXPERIMENTS
+#{{{1
+# EXP_NAME = sim1
+#}}}1
 
 getData:
 	aws s3 cp s3://cytof-cb-data/cb.txt data/cb.txt
