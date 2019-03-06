@@ -174,7 +174,9 @@ class Model(VI):
 
         # self.mp['sig0'] = ModelParam(self.L[0], 'positive')
         # self.mp['sig1'] = ModelParam(self.L[1], 'positive')
-        self.mp['sig'] = ModelParam(self.I, 'positive')
+        self.mp['sig'] = ModelParam(self.I, 'positive',
+                                    m=torch.zeros(self.I) * -1.0,
+                                    log_s=torch.zeros(self.I) * -1.0)
 
         self.mp['eta0'] = ModelParam((self.I, self.J, self.L[0] - 1), 'simplex')
         self.mp['eta1'] = ModelParam((self.I, self.J, self.L[1] - 1), 'simplex')

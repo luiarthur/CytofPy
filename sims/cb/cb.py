@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     path_to_exp_results = sys.argv[1]
     SEED = int(sys.argv[2])
-    subsample = .05
+    subsample = .2
 
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}'.format(img_dir), exist_ok=True)
