@@ -123,7 +123,7 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
+        out = cytofpy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
                                 priors=priors, minibatch_size=100, tau=0.1,
                                 trace_every=50, backup_every=50,
