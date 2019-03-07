@@ -2,7 +2,7 @@ SHELL:=/bin/bash
 .PHONY: getData test run clean retrieve retrieveAll
 
 # EXPERIMENT NAME
-EXP_NAME = sim1-subsample
+EXP_NAME = sim1-vae
 
 # RESULTS DIRECTORY
 RESULTS_DIR = results/$(EXP_NAME)
@@ -16,6 +16,7 @@ TEST_DIR = $(RESULTS_DIR)/test/
 # OLD EXPERIMENTS
 #{{{1
 # EXP_NAME = sim1
+# EXP_NAME = sim1-subsample
 #}}}1
 
 getData:
