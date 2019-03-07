@@ -21,3 +21,11 @@ out = fc1(x)
 out = act_fn(out)
 out = fc2(out)
 print(out)
+
+# Test dims
+y = torch.randn(20, 5)
+m = torch.randn(20, 5)
+b = torch.randn(3) * torch.ones(20, 3)
+# I want this to be 20 x (5 + 5 + 3)
+input_vec = torch.cat([y, m, b], dim=-1).shape
+

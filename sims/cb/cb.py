@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     path_to_exp_results = sys.argv[1]
     SEED = int(sys.argv[2])
-    subsample = .2
+    subsample = 1.0 # .2
 
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}'.format(img_dir), exist_ok=True)
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         plt.close()
 
     K = 30
-    L = [5, 5]
+    L = [5, 3]
 
     # model.debug=True
     # y_bounds = [-6., -4., -2.]
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=1e-6,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
-                                priors=priors, minibatch_size=5000, tau=0.1,
+                                priors=priors, minibatch_size=100, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED)
 
@@ -183,11 +183,11 @@ if __name__ == '__main__':
 
         # y0
         # FIXME: the observed y's are being changed!
-        for i in range(mod.I):
-            yi = torch.stack([mod.mp['y'][i].real_sample().detach() for b in range(10)])
-            plt.hist(yi.mean(0)[mod.m[i]].numpy())
-            plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
-            plt.close()
+        # for i in range(mod.I):
+        #     yi = torch.stack([mod.mp['y'][i].real_sample().detach() for b in range(10)])
+        #     plt.hist(yi.mean(0)[mod.m[i]].numpy())
+        #     plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
+        #     plt.close()
 
         # Plot sig
         sig = torch.stack([p['sig'] for p in post]).detach().numpy()

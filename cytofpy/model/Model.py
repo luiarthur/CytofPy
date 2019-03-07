@@ -8,6 +8,7 @@ from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
 from torch.nn import ParameterList
 
 from cytofpy.model.model_param import ModelParam, VI
+from cytofpy.model.vae import VAE
 
 import numpy as np
 
@@ -165,6 +166,9 @@ class Model(VI):
         else:
             self.m = m
 
+        # register y
+        self.y_data = y
+
         self.msum = [mi.sum() for mi in self.m]
 
         ### Assign Model Parameters###
@@ -184,27 +188,16 @@ class Model(VI):
         self.mp['alpha'] = ModelParam(1, 'positive')
         self.mp['v'] = ModelParam(self.K, 'unit_interval')
         self.mp['H'] = ModelParam((self.J, self.K), 'real')
-        self.mp['y'] = init_y_mp(y=y, m=self.m, mean_init=y_mean_init, sd_init=y_sd_init)
+        # self.mp['y'] = init_y_mp(y=y, m=self.m, mean_init=y_mean_init, sd_init=y_sd_init)
         ### END OF Assign Model Parameters###
 
         # This must be done after assigning model parameters
         super(Model, self).__init__()
-        self.y_vp = ParameterList(mp_yi.vp for mp_yi in self.mp['y'])
+        # self.y_vp = ParameterList(mp_yi.vp for mp_yi in self.mp['y'])
+        self.y_vae = VAE(self.J)
         
-    def vp_list(self):
-        vp = []
-        for key in self.mp:
-            if key == 'y':
-                for yi in self.mp['y']:
-                    vp.append(yi.vp)
-            else:
-                vp.append(self.mp[key].vp)
-
-        return vp
-
     def loglike(self, params, idx):
         y = params['y']
-        m = [self.m[i][idx[i], :] for i in range(self.I)]
 
         ll = 0.0
         for i in range(self.I):
@@ -264,10 +257,18 @@ class Model(VI):
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :]
                     if mi.sum() > 0:
-                        y_vp_m = self.mp['y'][i].vp[0, idx[i], :][mi]
-                        y_vp_s = self.mp['y'][i].vp[1, idx[i], :][mi].exp()
-                        yi = reals['y'][i]
-                        lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi[mi]).mean()
+                        # FIXME: REMOVE PRINTS
+
+                        y_vp_m = self.y_vae.m[mi]
+                        # print('m: {}'.format(y_vp_m))
+
+                        y_vp_s = self.y_vae.s[mi]
+                        # print('s: {}'.format(y_vp_s))
+
+                        yi = reals['y'][i][mi]
+                        # print('yi: {}'.format(yi))
+
+                        lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).mean()
 
                         fac = self.msum[i] 
                         out += lq_yi * fac
@@ -314,15 +315,16 @@ class Model(VI):
         reals = {}
         for key in self.mp:
             if key == 'y':
-                reals['y'] = []
-                for i in range(self.I):
-                    mi = self.m[i][idx[i], :].double()
-                    yi_vp = self.mp['y'][i].vp[:, idx[i], :]
-                    yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
-                    # NOTE: A trick to prevent computation of gradients for
-                    #       observed values
-                    yi = mi * yi + (1 - mi) * yi.detach()
-                    reals['y'].append(yi)
+                pass 
+                # reals['y'] = []
+                # for i in range(self.I):
+                #     mi = self.m[i][idx[i], :].double()
+                #     yi_vp = self.mp['y'][i].vp[:, idx[i], :]
+                #     yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
+                #     # NOTE: A trick to prevent computation of gradients for
+                #     #       observed values
+                #     yi = mi * yi + (1 - mi) * yi.detach()
+                #     reals['y'].append(yi)
             else:
                 reals[key] = self.mp[key].real_sample()
                 if self.mp[key].support in ['simplex', 'unit_interval']:
@@ -332,15 +334,29 @@ class Model(VI):
                     if self.verbose >= 2:
                         print('WARNING: Clamping real {} to have magnitude of 20!'.format(key))
 
+        reals['y'] = []
+        for i in range(self.I):
+            yi_dat = self.y_data[i][idx[i], :] + 0
+            mi = self.m[i][idx[i], :]
+
+            yi_dat.data[mi] = 0
+            mi = mi.double()
+            yi = self.y_vae(yi_dat, 1 - mi)
+
+            # NOTE: A trick to prevent computation of gradients for
+            #       imputed observed values
+            yi = yi - (1 - mi) * yi.detach() + (1 - mi) * yi_dat
+
+            reals['y'].append(yi)
+
         return reals
 
     def transform(self, reals):
         params = {}
         for key in self.mp:
-            if key == 'y':
-                params['y'] = reals['y']
-            else:
-                params[key] = self.mp[key].transform(reals[key])
+            params[key] = self.mp[key].transform(reals[key])
+        params['y'] = reals['y']
+
         return params
 
     def sample_params(self, idx):

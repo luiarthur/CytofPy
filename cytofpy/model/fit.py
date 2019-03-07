@@ -10,10 +10,16 @@ import sys
 torch.set_default_dtype(torch.float64)
 
 def check_nan_in_grad(mp, key, fixed_grad, i=None):
-    if i is None:
-        vp = mp[key].vp
+    if key == 'y_fc1_weight':
+        vp = mp.fc1.weight
+    elif key == 'y_fc1_bias':
+        vp = mp.fc1.bias
+    elif key == 'y_fc2_weight':
+        vp = mp.fc2.weight
+    elif key == 'y_fc2_bias':
+        vp = mp.fc2.bias
     else:
-        vp = mp[key][i].vp
+        vp = mp[key].vp
 
     grad_isnan = torch.isnan(vp.grad)
     if grad_isnan.sum() > 0:
@@ -31,12 +37,12 @@ def update(opt, mod, idx):
 
     fixed_grad = [False]
     with torch.no_grad():
+        # check_nan_in_grad(mod.y_vae, 'y_fc1_weight', fixed_grad)
+        # check_nan_in_grad(mod.y_vae, 'y_fc1_bias', fixed_grad)
+        # check_nan_in_grad(mod.y_vae, 'y_fc2_weight', fixed_grad)
+        # check_nan_in_grad(mod.y_vae, 'y_fc2_bias', fixed_grad)
         for key in mod.mp:
-            if key == 'y':
-                for i in range(mod.I):
-                    check_nan_in_grad(mod.mp, 'y', fixed_grad, i)
-            else:
-                check_nan_in_grad(mod.mp, key, fixed_grad)
+            check_nan_in_grad(mod.mp, key, fixed_grad)
 
     opt.step()
     return elbo, fixed_grad[0]

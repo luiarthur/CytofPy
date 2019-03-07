@@ -1,9 +1,7 @@
 import abc
-import matplotlib.pyplot as plt
 
 import torch
 from torch.distributions import Normal
-from torch.distributions import constraints
 from torch.distributions.transforms import StickBreakingTransform
 from torch.nn import Parameter
 
