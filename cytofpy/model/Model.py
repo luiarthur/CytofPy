@@ -341,11 +341,14 @@ class Model(VI):
 
             yi_dat.data[mi] = 0
             mi = mi.double()
-            yi = self.y_vae(yi_dat, 1 - mi)
+            yi = self.y_vae(yi_dat, mi)
 
             # NOTE: A trick to prevent computation of gradients for
             #       imputed observed values
             yi = yi - (1 - mi) * yi.detach() + (1 - mi) * yi_dat
+
+            # FIXME: REMOVE PRINT
+            # print(yi[mi.byte()])
 
             reals['y'].append(yi)
 
