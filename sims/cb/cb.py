@@ -92,11 +92,8 @@ if __name__ == '__main__':
     # model.debug=True
     # y_bounds = [-6., -4., -2.]
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          #y_bounds=y_bounds, p_bounds=[.01, .8, .01])
                                           y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
-                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01])
-                                          # y_quantiles=[1, 5, 10], p_bounds=[.05, .8, .05])
-    priors['sig'] = LogNormal(-1, .1)
+    priors['sig2'] = LogNormal(-1, .1)
     priors['alpha'] = Gamma(.1, .1)
 
     # Missing Mechanism
@@ -123,9 +120,9 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=1e-6,
+        out = cytofpy.model.fit(y, max_iter=3000, lr=1e-1, print_freq=10, eps=1e-6,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
-                                priors=priors, minibatch_size=100, tau=0.1,
+                                priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED)
 
@@ -190,23 +187,11 @@ if __name__ == '__main__':
         #     plt.close()
 
         # Plot sig
-        sig = torch.stack([p['sig'] for p in post]).detach().numpy()
-        plt.boxplot(sig, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        plt.xlabel('$\sigma$', fontsize=15)
-        plt.savefig('{}/sig.pdf'.format(img_dir))
+        sig2 = torch.stack([p['sig2'] for p in post]).detach().numpy()
+        plt.boxplot(sig2, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        plt.xlabel('$\sigma^2$', fontsize=15)
+        plt.savefig('{}/sig2.pdf'.format(img_dir))
         plt.close()
-
-        # sig0 = torch.stack([p['sig0'] for p in post]).detach().numpy()
-        # plt.boxplot(sig0[:, ::-1], showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        # plt.xlabel('$\sigma$0', fontsize=15)
-        # plt.savefig('{}/sig0.pdf'.format(img_dir))
-        # plt.close()
-
-        # sig1 = torch.stack([p['sig1'] for p in post]).detach().numpy()
-        # plt.boxplot(sig1, showmeans=True, whis=[2.5, 97.5], showfliers=False)
-        # plt.xlabel('$\sigma$1', fontsize=15)
-        # plt.savefig('{}/sig1.pdf'.format(img_dir))
-        # plt.close()
 
         # Plot W, v
         W = torch.stack([p['W'] for p in post]).detach().numpy()
@@ -254,23 +239,11 @@ if __name__ == '__main__':
         plt.close()
 
         # Plot sig mean trace
-        sig_trace = torch.stack([t['sig'].dist().mean for t in out['trace']])
-        plt.plot(sig_trace.detach().numpy()[2:])
-        plt.title('sig trace')
-        plt.savefig('{}/sig_trace.pdf'.format(img_dir))
+        sig2_trace = torch.stack([t['sig2'].dist().mean for t in out['trace']])
+        plt.plot(sig2_trace.detach().numpy()[2:])
+        plt.title('sig2 trace')
+        plt.savefig('{}/sig2_trace.pdf'.format(img_dir))
         plt.close()
-
-        # sig0_trace = torch.stack([t['sig0'].dist().mean for t in out['trace']])
-        # plt.plot(sig0_trace.detach().numpy()[2:])
-        # plt.title('sig0 trace')
-        # plt.savefig('{}/sig0_trace.pdf'.format(img_dir))
-        # plt.close()
-
-        # sig1_trace = torch.stack([t['sig1'].dist().mean for t in out['trace']])
-        # plt.plot(sig1_trace.detach().numpy()[2:])
-        # plt.title('sig1 trace')
-        # plt.savefig('{}/sig1_trace.pdf'.format(img_dir))
-        # plt.close()
 
         # lam posterior
         lam = [lam_post.sample(mod) for b in range(30)]

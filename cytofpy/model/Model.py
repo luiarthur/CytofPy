@@ -91,9 +91,7 @@ def default_priors(y, K:int=30, L=None,
             'delta0': Gamma(1, 1),
             'delta1': Gamma(1, 1),
             #
-            # 'sig0': LogNormal(0, 1),
-            # 'sig1': LogNormal(0, 1),
-            'sig': LogNormal(-1, .1),
+            'sig2': LogNormal(-1, .1),
             #
             'eta0': Dirichlet(torch.ones(L[0]) / L[0]),
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
@@ -176,11 +174,9 @@ class Model(VI):
         self.mp['delta0'] = ModelParam(self.L[0], 'positive')
         self.mp['delta1'] = ModelParam(self.L[1], 'positive')
 
-        # self.mp['sig0'] = ModelParam(self.L[0], 'positive')
-        # self.mp['sig1'] = ModelParam(self.L[1], 'positive')
-        self.mp['sig'] = ModelParam(self.I, 'positive',
-                                    m=torch.zeros(self.I) * -1.0,
-                                    log_s=torch.zeros(self.I) * -1.0)
+        self.mp['sig2'] = ModelParam(self.I, 'positive',
+                                     m=torch.zeros(self.I) * -1.0,
+                                     log_s=torch.zeros(self.I) * -1.0)
 
         self.mp['eta0'] = ModelParam((self.I, self.J, self.L[0] - 1), 'simplex')
         self.mp['eta1'] = ModelParam((self.I, self.J, self.L[1] - 1), 'simplex')
@@ -198,6 +194,7 @@ class Model(VI):
         
     def loglike(self, params, idx):
         y = params['y']
+        sig = params['sig2'].sqrt()
 
         ll = 0.0
         for i in range(self.I):
@@ -208,14 +205,12 @@ class Model(VI):
             # Ni x J x Lz
             mu0 = -params['delta0'].cumsum(0)
             d0 = Normal(mu0[None, None, :],
-                        params['sig'][i]).log_prob(y[i][:, :, None])
-                        # params['sig0'][None, None, :]).log_prob(y[i][:, :, None])
+                        sig[i]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
 
             mu1 = params['delta1'].cumsum(0)
             d1 = Normal(mu1[None, None, :],
-                        params['sig'][i]).log_prob(y[i][:, :, None])
-                        # params['sig1'][None, None, :]).log_prob(y[i][:, :, None])
+                        sig[i]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
             
             # Ni x J
@@ -245,7 +240,7 @@ class Model(VI):
 
             ll += lli
 
-        if self.verbose >= 2:
+        if self.verbose >= 1:
             print('log_like: {}'.format(ll))
 
         return ll
@@ -275,7 +270,7 @@ class Model(VI):
             else:
                 out += self.mp[key].log_q(reals[key])
 
-        if self.verbose >= 2:
+        if self.verbose >= 1:
             print('log_q: {}'.format(out / self.Nsum))
 
         return out / self.Nsum
@@ -306,7 +301,7 @@ class Model(VI):
                 tmp += self.mp[key].logabsdetJ(reals[key], params[key])
                 out += tmp.sum()
 
-        if self.verbose >= 2:
+        if self.verbose >= 1:
             print('log_prior: {}'.format(out / self.Nsum))
 
         return out / self.Nsum
@@ -331,7 +326,7 @@ class Model(VI):
                     # NOTE: This prevents nan's in elbo and gradients.
                     #       This should not influence inference.
                     reals[key] = reals[key].clamp(min=-20, max=20)
-                    if self.verbose >= 2:
+                    if self.verbose >= 999:
                         print('WARNING: Clamping real {} to have magnitude of 20!'.format(key))
 
         reals['y'] = []

@@ -11,9 +11,7 @@ def sample(mod):
     mu1 = params['delta1'].cumsum(0).detach()
     eta0 = params['eta0'].detach()
     eta1 = params['eta1'].detach()
-    sig = params['sig'].detach()
-    # sig0 = params['sig0'].detach()
-    # sig1 = params['sig1'].detach()
+    sig = params['sig2'].detach().sqrt()
     H = params['H'].detach()
     v = params['v'].detach()
     # TODO: USE in STICK-BREAKING IBP
