@@ -120,7 +120,7 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=0,
+        out = cytofpy.model.fit(y, max_iter=3000, lr=1e-1, print_freq=10, eps=0,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
                                 priors=priors, minibatch_size=200, tau=0.1,
                                 trace_every=50, backup_every=50,
@@ -265,6 +265,15 @@ if __name__ == '__main__':
             plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05)
             plt.tight_layout()
             plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
+            plt.close()
+
+        # Plot imputed ys
+        for i in range(mod.I):
+            yi = mod.y_vae[i](mod.y_data[i], mod.m[i].double()).detach()
+            yi[mod.m[i]] = 0
+
+            plt.hist(yi[mod.m[i]].numpy())
+            plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
 
     print("Done.")

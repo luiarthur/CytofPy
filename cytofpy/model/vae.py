@@ -37,11 +37,11 @@ class VAE(torch.nn.Module):
 
         # FIXME: remove these clamps?
         m = self.act_fn(x)
-        m = self.fc2_m(m).sigmoid() * 4 - 5
+        m = self.fc2_m(m).sigmoid() * 6 - 6
 
         log_s = self.act_fn(x)
         log_s = self.fc2_s(log_s)
-        s = log_s.sigmoid() * 3 + .5 
+        s = log_s.sigmoid() * .3 + .1
 
         self.m = m
         self.s = s
