@@ -143,12 +143,14 @@ if __name__ == '__main__':
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
+        plt.xlabel('iteration')
         plt.savefig('{}/elbo.pdf'.format(img_dir))
         plt.close()
 
         tail = 1000
-        plt.plot(elbo[tail:])
+        plt.plot(elbo[-tail:])
         plt.ylabel('ELBO / NSUM')
+        plt.xlabel('iteration')
         plt.savefig('{}/elbo_tail.pdf'.format(img_dir))
         plt.close()
 
@@ -181,14 +183,6 @@ if __name__ == '__main__':
         plt.axvline(mu0.shape[1] + .5)
         plt.savefig('{}/mu.pdf'.format(img_dir))
         plt.close()
-
-        # y0
-        # FIXME: the observed y's are being changed!
-        # for i in range(mod.I):
-        #     yi = torch.stack([mod.mp['y'][i].real_sample().detach() for b in range(10)])
-        #     plt.hist(yi.mean(0)[mod.m[i]].numpy())
-        #     plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
-        #     plt.close()
 
         # Plot sig
         sig2 = torch.stack([p['sig2'] for p in post]).detach().numpy()
