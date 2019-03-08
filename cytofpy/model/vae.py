@@ -6,7 +6,7 @@ from torch.nn import Parameter, ParameterList
 torch.set_default_dtype(torch.float64)
 
 class VAE(torch.nn.Module):
-    def __init__(self, J, hidden_size=None):
+    def __init__(self, J, hidden_size=None, y_min=-4, y_max=-2, s_min=.1, s_max=.3):
         super(VAE, self).__init__()
 
         input_size = J
@@ -28,6 +28,14 @@ class VAE(torch.nn.Module):
         self.m = None
         self.s = None
 
+        self.y_min = y_min
+        self.y_max = y_max
+        self.y_range = self.y_max - self.y_min
+
+        self.s_min = s_min
+        self.s_max = s_max
+        self.s_range = self.s_max - self.s_min
+
     def forward(self, y_in, m_in):
         N = y_in.size(0)
 
@@ -46,11 +54,11 @@ class VAE(torch.nn.Module):
 
         # FIXME: remove these clamps?
         m = self.act_fn(x)
-        m = self.fc2_m(m).sigmoid() * 4 - 5
+        m = self.fc2_m(m).sigmoid() * self.y_range + self.y_min
 
         log_s = self.act_fn(x)
         log_s = self.fc2_s(log_s)
-        s = log_s.sigmoid() * .3 + .1
+        s = log_s.sigmoid() * self.s_range + self.s_min
 
         self.m = m
         self.s = s

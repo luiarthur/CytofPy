@@ -90,7 +90,6 @@ if __name__ == '__main__':
     L = [5, 3]
 
     # model.debug=True
-    # y_bounds = [-6., -4., -2.]
     priors = cytofpy.model.default_priors(y, K=K, L=L,
                                           y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
     priors['sig2'] = LogNormal(-1, .1)
@@ -120,8 +119,8 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=3000, lr=1e-1, print_freq=10, eps=0,
-                                y_mean_init=y_bounds[1], y_sd_init=0.1,
+        out = cytofpy.model.fit(y, max_iter=4000, lr=1e-1, print_freq=10, eps=0,
+                                y_min=-6, y_max=-0.5, s_min=.1, s_max=.2,
                                 priors=priors, minibatch_size=200, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)

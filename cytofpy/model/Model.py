@@ -134,8 +134,9 @@ def init_y_mp(y, m=None, mean_init=-4.0, sd_init=0.5):
 
 
 class Model(VI):
-    def __init__(self, y, priors, m=None, y_mean_init=-6.0, y_sd_init=0.5,
-                 tau=0.1, verbose=1, use_stick_break=True):
+    def __init__(self, y, priors, m=None, y_min=-5.0, y_max=-1,
+                 s_min=.1, s_max=.3, tau=0.1, verbose=1, use_stick_break=True):
+
         self.verbose = verbose
 
         # Use stick breaking construction of IBP
@@ -187,14 +188,14 @@ class Model(VI):
         self.mp['alpha'] = ModelParam(1, 'positive')
         self.mp['v'] = ModelParam(self.K, 'unit_interval')
         self.mp['H'] = ModelParam((self.J, self.K), 'real')
-        # self.mp['y'] = init_y_mp(y=y, m=self.m, mean_init=y_mean_init, sd_init=y_sd_init)
         ### END OF Assign Model Parameters###
 
         # This must be done after assigning model parameters
         super(Model, self).__init__()
         # self.y_vp = ParameterList(mp_yi.vp for mp_yi in self.mp['y'])
 
-        self.y_vae = [VAE(self.J) for i in range(self.I)]
+        self.y_vae = [VAE(self.J, y_min=y_min, y_max=y_max, s_min=s_min, s_max=s_max)
+                      for i in range(self.I)]
 
         vp_list = []
         for i in range(self.I):
