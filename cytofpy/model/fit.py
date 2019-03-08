@@ -51,7 +51,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         print_freq=10, seed=1, y_mean_init=-6.0, y_sd_init=0.5,
         trace_every=None, eps=1e-6, tau=0.1, backup_every=10,
         y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05],
-        init_mp=None, verbose=1, flush=True):
+        use_stick_break=True, init_mp=None, verbose=1, flush=True):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -65,10 +65,15 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     m = [torch.isnan(yi) for yi in y]
 
     model = Model(y=y, m=m, priors=priors, tau=tau, verbose=verbose,
+                  use_stick_break=use_stick_break,
                   y_mean_init=y_mean_init, y_sd_init=y_sd_init)
 
     if init_mp is not None:
         model.mp = init_mp
+
+    if verbose >= 1.1:
+        print('state_dict:')
+        print(model.state_dict())
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     best_mp = copy.deepcopy(model.mp)
@@ -126,4 +131,5 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     #        why can't i return priors?
     #        I could before...
     return {'elbo': elbo_hist, 'trace': trace, 'mp': best_mp, 'tau': tau,
-            'y': y, 'priors': str(model.priors)}
+            'use_stick_break': use_stick_break, 'y': y,
+            'priors': str(model.priors)}

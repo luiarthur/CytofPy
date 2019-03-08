@@ -120,11 +120,13 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=3000, lr=1e-1, print_freq=10, eps=1e-6,
+        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=0,
                                 y_mean_init=y_bounds[1], y_sd_init=0.1,
-                                priors=priors, minibatch_size=500, tau=0.1,
+                                priors=priors, minibatch_size=200, tau=0.1,
                                 trace_every=50, backup_every=50,
-                                verbose=0, seed=SEED)
+                                verbose=0, seed=SEED, use_stick_break=False)
+    # Flush output
+    sys.stdout.flush()
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
@@ -135,7 +137,9 @@ if __name__ == '__main__':
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
         elbo = out['elbo']
-        mod = cytofpy.model.Model(y=y, priors=priors, tau=out['tau'])
+        use_stick_break = out['use_stick_break']
+        mod = cytofpy.model.Model(y=y, priors=priors,
+                                  tau=out['tau'], use_stick_break=use_stick_break)
         mod.mp = out['mp']
 
         plt.plot(elbo)
@@ -157,9 +161,10 @@ if __name__ == '__main__':
         # Plot Z
         H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
         v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
-        # TODO: STICK BREAK IBP
-        Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
-        # Z = (v > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+        if use_stick_break:
+            Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+        else:
+            Z = (v > torch.distributions.Normal(0, 1).cdf(H)).numpy()
         plt.imshow(Z.mean(0), aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
         plt.colorbar()
@@ -204,7 +209,10 @@ if __name__ == '__main__':
             plt.ylabel('$W_{}$'.format(i+1), rotation=0, labelpad=15)
 
         plt.subplot(mod.I + 1, 1, mod.I + 1)
-        plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        if use_stick_break:
+            plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
+        else:
+            plt.boxplot(v, showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.ylabel('$v$', rotation=0, labelpad=15)
         plt.tight_layout()
         plt.savefig('{}/W_v.pdf'.format(img_dir))

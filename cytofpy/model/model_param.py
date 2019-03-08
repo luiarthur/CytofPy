@@ -40,7 +40,7 @@ class ModelParam(abc.ABC):
         self.support = support
 
     def dist(self):
-        if self.support == 'simplex':
+        if self.support in ['simplex', 'unit_interval']:
             return Normal(self.vp[0], self.vp[1].sigmoid()*10)
         else:
             return Normal(self.vp[0], self.vp[1].exp())

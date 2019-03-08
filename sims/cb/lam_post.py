@@ -14,9 +14,10 @@ def sample(mod):
     sig = params['sig2'].detach().sqrt()
     H = params['H'].detach()
     v = params['v'].detach()
-    # TODO: USE in STICK-BREAKING IBP
-    Z = (v.cumprod(0) > Normal(0, 1).cdf(H)).double()
-    # Z = (v > Normal(0, 1).cdf(H)).double()
+    if mod.use_stick_break:
+        Z = (v.cumprod(0) > Normal(0, 1).cdf(H)).double()
+    else:
+        Z = (v > Normal(0, 1).cdf(H)).double()
     W = params['W'].detach()
 
     for i in range(mod.I):

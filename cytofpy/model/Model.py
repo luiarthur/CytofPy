@@ -135,8 +135,11 @@ def init_y_mp(y, m=None, mean_init=-4.0, sd_init=0.5):
 
 class Model(VI):
     def __init__(self, y, priors, m=None, y_mean_init=-6.0, y_sd_init=0.5,
-                 tau=0.1, verbose=1):
+                 tau=0.1, verbose=1, use_stick_break=True):
         self.verbose = verbose
+
+        # Use stick breaking construction of IBP
+        self.use_stick_break = use_stick_break
 
         # Dimensions of data
         self.I = priors['I']
@@ -190,7 +193,16 @@ class Model(VI):
         # This must be done after assigning model parameters
         super(Model, self).__init__()
         # self.y_vp = ParameterList(mp_yi.vp for mp_yi in self.mp['y'])
-        self.y_vae = VAE(self.J)
+
+        self.y_vae = [VAE(self.J) for i in range(self.I)]
+
+        vp_list = []
+        for i in range(self.I):
+            x = self.y_vae[i].parameters()
+            for xi in x:
+                vp_list.append(xi)
+
+        self.y_vae_vp = ParameterList(vp_list)
         
     def loglike(self, params, idx):
         y = params['y']
@@ -204,13 +216,11 @@ class Model(VI):
 
             # Ni x J x Lz
             mu0 = -params['delta0'].cumsum(0)
-            d0 = Normal(mu0[None, None, :],
-                        sig[i]).log_prob(y[i][:, :, None])
+            d0 = Normal(mu0[None, None, :], sig[i]).log_prob(y[i][:, :, None])
             d0 += params['eta0'][i:i+1, :, :].log()
 
             mu1 = params['delta1'].cumsum(0)
-            d1 = Normal(mu1[None, None, :],
-                        sig[i]).log_prob(y[i][:, :, None])
+            d1 = Normal(mu1[None, None, :], sig[i]).log_prob(y[i][:, :, None])
             d1 += params['eta1'][i:i+1, :, :].log()
             
             # Ni x J
@@ -224,10 +234,12 @@ class Model(VI):
             # d: Ni x K
             # Ni x J x K
 
-            # TODO: USE THIS FOR STICK-BREAKING IBP
-            b_vec = params['v'].cumprod(0)
-            # b_vec = params['v']
-            Z = compute_Z(b_vec[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
+            if self.use_stick_break:
+                v = params['v'].cumprod(0)
+            else:
+                v = params['v']
+            Z = compute_Z(v[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
+
             c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
             d = c.sum(1)
 
@@ -252,18 +264,22 @@ class Model(VI):
                 for i in range(self.I):
                     mi = self.m[i][idx[i], :]
                     if mi.sum() > 0:
-                        # FIXME: REMOVE PRINTS
 
-                        y_vp_m = self.y_vae.m[mi]
-                        # print('m: {}'.format(y_vp_m))
-
-                        y_vp_s = self.y_vae.s[mi]
-                        # print('s: {}'.format(y_vp_s))
-
+                        y_vp_m = self.y_vae[i].m[mi]
+                        y_vp_s = self.y_vae[i].s
                         yi = reals['y'][i][mi]
+
+                        if self.verbose >= 1.2:
+                            print('y{}: {}'.format(i, yi[1]))
+                            print('y{}_vp_m: {}'.format(i, y_vp_m[1]))
+                            print('y{}_vp_s: {}'.format(i, y_vp_s[1]))
+
                         # print('yi: {}'.format(yi))
 
                         lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).mean()
+
+                        if self.verbose >= 1.1:
+                            print('lq_y{}: {}'.format(i, lq_yi))
 
                         fac = self.msum[i] 
                         out += lq_yi * fac
@@ -291,9 +307,10 @@ class Model(VI):
                         fac = self.msum[i] 
                         out += lp_yi * fac
             elif key == 'v':
-                # TODO: USE STICK-BREAKING IBP
-                tmp = Beta(params['alpha'], 1).log_prob(params['v'])
-                # tmp = Beta(params['alpha'] / self.K, 1).log_prob(params['v'])
+                if self.use_stick_break:
+                    tmp = Beta(params['alpha'], 1).log_prob(params['v'])
+                else:
+                    tmp = Beta(params['alpha'] / self.K, 1).log_prob(params['v'])
                 tmp += self.mp['v'].logabsdetJ(reals['v'], params['v'])
                 out += tmp.sum()
             else:
@@ -336,8 +353,19 @@ class Model(VI):
 
             yi_dat.data[mi] = 0
             mi = mi.double()
-            yi = self.y_vae(yi_dat, mi)
 
+            if self.verbose >= 1.1:
+                if i == 0:
+                    up_to = 2
+                    y_tmp = self.y_data[i][:up_to, :] + 0
+                    m_tmp = self.m[i][:up_to, :]
+                    y_tmp.data[m_tmp] = 0
+                    y_track = self.y_vae[i](y_tmp, m_tmp.double())
+                    print('y_m_track: {}'.format(self.y_vae[i].m[m_tmp]))
+                    print('y_s_track: {}'.format(self.y_vae[i].s))
+
+            yi = self.y_vae[i](yi_dat, mi)
+            
             # NOTE: A trick to prevent computation of gradients for
             #       imputed observed values
             yi = yi - (1 - mi) * yi.detach() + (1 - mi) * yi_dat
