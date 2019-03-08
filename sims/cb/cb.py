@@ -264,7 +264,8 @@ if __name__ == '__main__':
         for i in range(mod.I):
             yi = vae[i](mod.y_data[i], mod.m[i]).detach()
 
-            plt.hist(yi[mod.m[i]].numpy())
+            plt.hist(vae[i].m[mod.m[i]].detach().numpy(), bins=30)
+            plt.xlim(-10, 5)
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
 
