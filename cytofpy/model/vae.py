@@ -19,7 +19,8 @@ class VAE(torch.nn.Module):
         self.fc1 = torch.nn.Linear(input_size, hidden_size)
         self.fc2_m = torch.nn.Linear(hidden_size, output_size)
 
-        self.fc2_s = torch.nn.Linear(hidden_size, 1)
+        # self.fc2_s = torch.nn.Linear(hidden_size, 1)
+        self.fc2_s = torch.nn.Linear(hidden_size, output_size)
 
         self.act_fn = torch.nn.Tanh()
         # self.act_fn = torch.nn.ReLU()

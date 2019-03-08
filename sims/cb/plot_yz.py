@@ -26,14 +26,18 @@ def add_gridlines_Z(Z):
 
 def plot_yz(yi, Z_mean, wi_mean, lami_est, w_thresh=.01,
             cm_greys = plt.cm.get_cmap('Greys', 5),
-            cm_y=plt.cm.get_cmap('bwr', 7), vlim_y=(-3, 3)):
+            cm_y=plt.cm.get_cmap('bwr', 6), vlim_y=(-3, 3)):
+            #cm_y=plt.cm.get_cmap('coolwarm', 7), vlim_y=(-3, 3)):
 
     J = yi.shape[1]
 
     vmin_y, vmax_y = vlim_y
-    cm_y.set_under(color='blue')
-    cm_y.set_over(color='red')
+
+    # color for na
     cm_y.set_bad(color='black')
+
+    # cm_y.set_under(color='blue')
+    # cm_y.set_over(color='red')
 
     k_ord = wi_mean.argsort()
     z_cols = []

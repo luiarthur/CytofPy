@@ -105,34 +105,6 @@ def default_priors(y, K:int=30, L=None,
             #
             'W': Dirichlet(torch.ones(K) / K)}
 
-def init_y_mp(y, m=None, mean_init=-4.0, sd_init=0.5):
-    """
-    make sure to zero the gradients for observed y
-    """
-    I = len(y)
-
-    if m is None:
-        m = [torch.isnan(yi) for yi in y]
-
-    # Copy all. y_vp_m for observed will then be the observed values.
-    y_vp_m_init = copy.deepcopy(y)
-
-    # Set sd for observed values to 0, so sampling yields the observed values.
-    y_vp_log_s_init = [torch.ones(yi.shape) * float('-inf') for yi in y]
-
-    for i in range(I):
-        # Set means for missing y to mean_init
-        y_vp_m_init[i][m[i]] = mean_init
-
-        # Set log_sd for missing y to log(sd_init)
-        y_vp_log_s_init[i][m[i]] = math.log(sd_init)
-
-    y_mp = [ModelParam(y[i].shape, 'real', m=y_vp_m_init[i], log_s=y_vp_log_s_init[i])
-            for i in range(I)]
-
-    return y_mp
-
-
 class Model(VI):
     def __init__(self, y, priors, m=None, y_min=-5.0, y_max=-1,
                  s_min=.1, s_max=.3, tau=0.1, verbose=1, use_stick_break=True):
@@ -267,13 +239,13 @@ class Model(VI):
                     if mi.sum() > 0:
 
                         y_vp_m = self.y_vae[i].m[mi]
-                        y_vp_s = self.y_vae[i].s
+                        y_vp_s = self.y_vae[i].s[mi]
                         yi = reals['y'][i][mi]
 
                         if self.verbose >= 1.2:
-                            print('y{}: {}'.format(i, yi[1]))
-                            print('y{}_vp_m: {}'.format(i, y_vp_m[1]))
-                            print('y{}_vp_s: {}'.format(i, y_vp_s[1]))
+                            print('y{}: {}'.format(i, yi[0]))
+                            print('y{}_vp_m: {}'.format(i, y_vp_m[0]))
+                            print('y{}_vp_s: {}'.format(i, y_vp_s[0]))
 
                         # print('yi: {}'.format(yi))
 
@@ -349,20 +321,20 @@ class Model(VI):
 
         reals['y'] = []
         for i in range(self.I):
-            yi_dat = self.y_data[i][idx[i], :]
-            mi = self.m[i][idx[i], :]
-            yi = self.y_vae[i](yi_dat, mi)
-            reals['y'].append(yi)
-
             # For debugging
             if self.verbose >= 1.1:
                 if i == 0:
                     up_to = 2
                     y_tmp = self.y_data[i][:up_to, :]
                     m_tmp = self.m[i][:up_to, :]
-                    y_track = self.y_vae[i](y_tmp, m_tmp.double())
+                    y_track = self.y_vae[i](y_tmp, m_tmp)
                     print('y_m_track: {}'.format(self.y_vae[i].m[m_tmp]))
-                    print('y_s_track: {}'.format(self.y_vae[i].s))
+                    print('y_s_track: {}'.format(self.y_vae[i].s[m_tmp]))
+
+            yi_dat = self.y_data[i][idx[i], :]
+            mi = self.m[i][idx[i], :]
+            yi = self.y_vae[i](yi_dat, mi)
+            reals['y'].append(yi)
 
         return reals
 

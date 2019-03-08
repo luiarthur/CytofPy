@@ -69,9 +69,8 @@ if __name__ == '__main__':
     # Color map
     cm_greys = plt.cm.get_cmap('Greys', 5)
     VMIN, VMAX = (-3, 3) 
-    cm = plt.cm.get_cmap('bwr', 7)
-    cm.set_under(color='blue')
-    cm.set_over(color='red')
+    # cm = plt.cm.get_cmap('coolwarm', 6)
+    cm = plt.cm.get_cmap('bwr', 6)
     cm.set_bad(color='black')
 
     # Plot yi histograms
@@ -87,7 +86,7 @@ if __name__ == '__main__':
         plt.close()
 
     K = 30
-    L = [5, 3]
+    L = [5, 5]
 
     # model.debug=True
     priors = cytofpy.model.default_priors(y, K=K, L=L,
@@ -119,8 +118,8 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=4000, lr=1e-1, print_freq=10, eps=0,
-                                y_min=-6, y_max=-0.5, s_min=.1, s_max=.2,
+        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
+                                y_min=-7, y_max=-.5, s_min=.1, s_max=.2,
                                 priors=priors, minibatch_size=200, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
