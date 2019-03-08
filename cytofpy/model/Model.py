@@ -348,32 +348,20 @@ class Model(VI):
 
         reals['y'] = []
         for i in range(self.I):
-            yi_dat = self.y_data[i][idx[i], :] + 0
+            yi_dat = self.y_data[i][idx[i], :]
             mi = self.m[i][idx[i], :]
+            yi = self.y_vae[i](yi_dat, mi)
+            reals['y'].append(yi)
 
-            yi_dat.data[mi] = 0
-            mi = mi.double()
-
+            # For debugging
             if self.verbose >= 1.1:
                 if i == 0:
                     up_to = 2
-                    y_tmp = self.y_data[i][:up_to, :] + 0
+                    y_tmp = self.y_data[i][:up_to, :]
                     m_tmp = self.m[i][:up_to, :]
-                    y_tmp.data[m_tmp] = 0
                     y_track = self.y_vae[i](y_tmp, m_tmp.double())
                     print('y_m_track: {}'.format(self.y_vae[i].m[m_tmp]))
                     print('y_s_track: {}'.format(self.y_vae[i].s))
-
-            yi = self.y_vae[i](yi_dat, mi)
-            
-            # NOTE: A trick to prevent computation of gradients for
-            #       imputed observed values
-            yi = yi - (1 - mi) * yi.detach() + (1 - mi) * yi_dat
-
-            # FIXME: REMOVE PRINT
-            # print(yi[mi.byte()])
-
-            reals['y'].append(yi)
 
         return reals
 

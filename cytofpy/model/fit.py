@@ -77,6 +77,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     best_mp = copy.deepcopy(model.mp)
+    best_vae = copy.deepcopy(model.y_vae)
 
     elbo_hist = []
     trace = []
@@ -110,6 +111,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
 
         if backup_every > 0 and t % backup_every == 0 and elbo_good:
             best_mp = copy.deepcopy(model.mp)
+            best_vae = model.y_vae
 
         if trace_every > 0 and t % trace_every == 0 and elbo_good:
             mp = {}
@@ -131,5 +133,5 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     #        why can't i return priors?
     #        I could before...
     return {'elbo': elbo_hist, 'trace': trace, 'mp': best_mp, 'tau': tau,
-            'use_stick_break': use_stick_break, 'y': y,
+            'vae': best_vae, 'use_stick_break': use_stick_break, 'y': y,
             'priors': str(model.priors)}

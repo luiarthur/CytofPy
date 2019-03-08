@@ -31,13 +31,22 @@ class VAE(torch.nn.Module):
     def forward(self, y_in, m_in):
         N = y_in.size(0)
 
+        # make a copy of y_in
+        y_in = y_in + 0.
+        y_in[m_in] = 0
+        yi = y_in + 0.
+        # set missing values to 0
+        yi[m_in] = 0.
+        # make a copy of m_in
+        mi = m_in.double()
+
         # x = self.fc1(torch.cat([y_in, m_in], dim=1))
         # x = self.fc1(torch.cat([y_in, i_idx * torch.ones(N, self.I)], dim=1))
-        x = self.fc1(y_in)
+        x = self.fc1(yi)
 
         # FIXME: remove these clamps?
         m = self.act_fn(x)
-        m = self.fc2_m(m).sigmoid() * 6 - 6
+        m = self.fc2_m(m).sigmoid() * 4 - 5
 
         log_s = self.act_fn(x)
         log_s = self.fc2_s(log_s)
@@ -46,4 +55,9 @@ class VAE(torch.nn.Module):
         self.m = m
         self.s = s
 
-        return Normal(self.m, self.s).rsample()
+        yi = Normal(self.m, self.s).rsample()
+        
+        # NOTE: A trick to prevent computation of gradients for
+        #       imputed observed values
+        return yi - (1 - mi) * yi.detach() + (1 - mi) * y_in
+

@@ -141,6 +141,7 @@ if __name__ == '__main__':
         mod = cytofpy.model.Model(y=y, priors=priors,
                                   tau=out['tau'], use_stick_break=use_stick_break)
         mod.mp = out['mp']
+        vae = out['vae']
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
@@ -269,8 +270,7 @@ if __name__ == '__main__':
 
         # Plot imputed ys
         for i in range(mod.I):
-            yi = mod.y_vae[i](mod.y_data[i], mod.m[i].double()).detach()
-            yi[mod.m[i]] = 0
+            yi = vae[i](mod.y_data[i], mod.m[i]).detach()
 
             plt.hist(yi[mod.m[i]].numpy())
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))

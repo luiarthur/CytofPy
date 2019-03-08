@@ -22,6 +22,7 @@ def sample(mod):
 
     for i in range(mod.I):
         yi = params['y'][i].detach()
+
         # compute probs
         # d0 = Normal(mu0[None, None, :], sig0[None, None, :]).log_prob(yi[:, :, None])
         d0 = Normal(mu0[None, None, :], sig[i]).log_prob(yi[:, :, None])
