@@ -48,8 +48,7 @@ def update(opt, mod, idx):
     return elbo, fixed_grad[0]
 
 def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
-        print_freq=10, seed=1, y_min=-5.0, y_max=-1,
-        s_min=.1, s_max=.3,
+        print_freq=10, seed=1, y_mean_init=-3.0, y_sd_init=0.1,
         trace_every=None, eps=1e-6, tau=0.1, backup_every=10,
         y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05],
         use_stick_break=True, init_mp=None, verbose=1, flush=True):
@@ -65,9 +64,13 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
 
     m = [torch.isnan(yi) for yi in y]
 
+    if priors is None:
+        priors = cytofpy.model.default_priors(y, K=K, L=L,
+                                              y_quantiles=y_quantiles, p_bounds=p_bounds)
+
     model = Model(y=y, m=m, priors=priors, tau=tau, verbose=verbose,
                   use_stick_break=use_stick_break,
-                  y_min=y_min, y_max=y_max, s_min=s_min, s_max=s_max)
+                  y_mean_init=y_mean_init, y_sd_init=y_sd_init)
 
     if init_mp is not None:
         model.mp = init_mp

@@ -106,8 +106,8 @@ def default_priors(y, K:int=30, L=None,
             'W': Dirichlet(torch.ones(K) / K)}
 
 class Model(VI):
-    def __init__(self, y, priors, m=None, y_min=-5.0, y_max=-1,
-                 s_min=.1, s_max=.3, tau=0.1, verbose=1, use_stick_break=True):
+    def __init__(self, y, priors, m=None, y_mean_init=-3.0, y_sd_init=0.1,
+                 tau=0.1, verbose=1, use_stick_break=True):
 
         self.verbose = verbose
 
@@ -166,7 +166,7 @@ class Model(VI):
         super(Model, self).__init__()
         # self.y_vp = ParameterList(mp_yi.vp for mp_yi in self.mp['y'])
 
-        self.y_vae = [VAE(self.J, y_min=y_min, y_max=y_max, s_min=s_min, s_max=s_max)
+        self.y_vae = [VAE(self.J, mean_init=y_mean_init, sd_init=y_sd_init)
                       for i in range(self.I)]
 
         vp_list = []
@@ -238,16 +238,14 @@ class Model(VI):
                     mi = self.m[i][idx[i], :]
                     if mi.sum() > 0:
 
-                        y_vp_m = self.y_vae[i].m[mi]
-                        y_vp_s = self.y_vae[i].s[mi]
+                        y_vp_m = self.y_vae[i].mean_fn_cached[mi]
+                        y_vp_s = self.y_vae[i].sd_fn_cached[mi]
                         yi = reals['y'][i][mi]
 
                         if self.verbose >= 1.2:
                             print('y{}: {}'.format(i, yi[0]))
                             print('y{}_vp_m: {}'.format(i, y_vp_m[0]))
                             print('y{}_vp_s: {}'.format(i, y_vp_s[0]))
-
-                        # print('yi: {}'.format(yi))
 
                         lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).mean()
 
@@ -328,8 +326,8 @@ class Model(VI):
                     y_tmp = self.y_data[i][:up_to, :]
                     m_tmp = self.m[i][:up_to, :]
                     y_track = self.y_vae[i](y_tmp, m_tmp)
-                    print('y_m_track: {}'.format(self.y_vae[i].m[m_tmp]))
-                    print('y_s_track: {}'.format(self.y_vae[i].s[m_tmp]))
+                    print('y_m_track: {}'.format(self.y_vae[i].mean_fn_cached[m_tmp]))
+                    print('y_s_track: {}'.format(self.y_vae[i].sd_fn_cached[m_tmp]))
 
             yi_dat = self.y_data[i][idx[i], :]
             mi = self.m[i][idx[i], :]

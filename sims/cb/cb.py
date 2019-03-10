@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     # model.debug=True
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
+                                          y_quantiles=[0, 35, 50], p_bounds=[.05, .8, .05])
     priors['sig2'] = LogNormal(-1, .1)
     priors['alpha'] = Gamma(.1, .1)
 
@@ -119,8 +119,7 @@ if __name__ == '__main__':
 
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
-                                y_min=-7, y_max=-.5, s_min=.1, s_max=.2,
-                                priors=priors, minibatch_size=200, tau=0.1,
+                                priors=priors, minibatch_size=1000, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
     # Flush output
@@ -264,7 +263,8 @@ if __name__ == '__main__':
         for i in range(mod.I):
             yi = vae[i](mod.y_data[i], mod.m[i]).detach()
 
-            plt.hist(vae[i].m[mod.m[i]].detach().numpy(), bins=30)
+            # plt.hist(vae[i].mean_fn_cached[mod.m[i]].detach().numpy())
+            plt.hist(yi[mod.m[i]].detach().numpy())
             plt.xlim(-10, 5)
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
