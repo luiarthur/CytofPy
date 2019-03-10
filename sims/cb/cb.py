@@ -23,9 +23,15 @@ import pickle
 if __name__ == '__main__':
     torch.set_num_threads(1)
 
-    path_to_exp_results = sys.argv[1]
-    SEED = int(sys.argv[2])
-    subsample = 1.0 # .2
+    if len(sys.argv) > 1:
+        path_to_exp_results = sys.argv[1]
+        SEED = int(sys.argv[2])
+    else:
+        path_to_exp_results = 'results/sim1-vae/test/'
+        SEED = 2
+
+    # subsample = 1.0 # .2
+    subsample = .05
 
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}'.format(img_dir), exist_ok=True)
@@ -68,9 +74,8 @@ if __name__ == '__main__':
 
     # Color map
     cm_greys = plt.cm.get_cmap('Greys', 5)
-    VMIN, VMAX = (-3, 3) 
-    # cm = plt.cm.get_cmap('coolwarm', 6)
-    cm = plt.cm.get_cmap('bwr', 6)
+    VMIN, VMAX = VLIM = (-4, 4) 
+    cm = plt.cm.get_cmap('bwr', 9)
     cm.set_bad(color='black')
 
     # Plot yi histograms
@@ -86,7 +91,7 @@ if __name__ == '__main__':
         plt.close()
 
     K = 30
-    L = [5, 5]
+    L = [5, 3]
 
     # model.debug=True
     priors = cytofpy.model.default_priors(y, K=K, L=L,
@@ -119,9 +124,10 @@ if __name__ == '__main__':
 
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
-                                priors=priors, minibatch_size=1000, tau=0.1,
+                                priors=priors, minibatch_size=2000, tau=0.1,
                                 trace_every=50, backup_every=50,
-                                verbose=0, seed=SEED, use_stick_break=False)
+                                # verbose=0, seed=SEED, use_stick_break=False)
+                                verbose=0, seed=0, use_stick_break=False)
     # Flush output
     sys.stdout.flush()
 
@@ -246,15 +252,35 @@ if __name__ == '__main__':
         plt.close()
 
         # lam posterior
-        lam = [lam_post.sample(mod) for b in range(30)]
+        # lam_samps = 100
+        lam_samps = 100
+        lam = [lam_post.sample(mod) for b in range(lam_samps)]
         lam = [torch.stack([lam_b[i] for lam_b in lam]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
+
+        # TODO: TEST
+        # I think we can remove noisy cells this way. 
+        # lam_onehot = []
+        # for i in range(mod.I):
+        #     lami_onehot = torch.zeros((lam[i].size(0), lam[i].size(1), K), dtype=torch.int64)
+        #     lam_onehot.append(lami_onehot)
+        #     for b in range(lam_samps):
+        #         lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
+    
+        #     lam_onehot[0]
+        #     lam_onehot[0].double().mean(0)
+        #     lam_onehot[0].double().mean(0).argmax(1) # This should be lam_est
+        #     # Std of lam_i
+        #     lam_onehot[0].double().std(0).sum(1)
+        #     (lam_onehot[0].double().std(0).sum(1) > 1).double().mean()
+        #     idx_noisy = lam_onehot[0].double().std(0).sum(1) > 1
+        #     y[0][1 - idx_noisy, :]
 
         W_mean = W.mean(0)
         Z_mean = Z.mean(0)
 
         for i in range(mod.I):
-            plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05)
+            plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05, cm_y=cm, vlim_y=VLIM)
             plt.tight_layout()
             plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
             plt.close()
@@ -262,7 +288,6 @@ if __name__ == '__main__':
         # Plot imputed ys
         for i in range(mod.I):
             yi = vae[i](mod.y_data[i], mod.m[i]).detach()
-
             # plt.hist(vae[i].mean_fn_cached[mod.m[i]].detach().numpy())
             plt.hist(yi[mod.m[i]].detach().numpy())
             plt.xlim(-10, 5)
