@@ -98,7 +98,8 @@ if __name__ == '__main__':
                                           y_quantiles=[0, 35, 50], p_bounds=[.05, .8, .05])
     priors['sig2'] = LogNormal(-1, .1)
     priors['alpha'] = Gamma(.1, .1)
-    priors['delta'] = Gamma(10, 1)
+    priors['delta0'] = Gamma(10, 1)
+    priors['delta1'] = Gamma(10, 1)
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 1, .1)
