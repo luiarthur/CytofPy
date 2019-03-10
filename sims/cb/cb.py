@@ -95,7 +95,8 @@ if __name__ == '__main__':
 
     # model.debug=True
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          y_quantiles=[0, 35, 50], p_bounds=[.05, .8, .05])
+                                          y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
+                                          #y_quantiles=[0, 35, 50], p_bounds=[.05, .8, .05])
     priors['sig2'] = LogNormal(-1, .1)
     priors['alpha'] = Gamma(.1, .1)
     priors['delta0'] = Gamma(10, 1)
