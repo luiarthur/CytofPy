@@ -8,6 +8,7 @@ Inference (ADVI) and PyTorch.
 - [Variational Inference][4]
 - [Stochastic Variational Inference][5]
 - [Unit Simplex (Stick Breaking) Transform][6]
+- [Amortized Inference][7] (needs a better reference)
 - ~~Taking gradients w.r.t. parameters of random variates~~
     - ~~[Pathwise Derivatives Beyond the Reparameterization Trick][1]~~
     - ~~[PyTorch `rsample`][2]~~
@@ -18,3 +19,4 @@ Inference (ADVI) and PyTorch.
 [4]: https://arxiv.org/pdf/1601.00670.pdf
 [5]: https://arxiv.org/pdf/1206.7051.pdf
 [6]: https://mc-stan.org/docs/2_18/reference-manual/simplex-transform-section.html
+[7]: https://media.nips.cc/Conferences/2016/Slides/6199-Slides.pdf
