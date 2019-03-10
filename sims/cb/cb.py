@@ -260,21 +260,17 @@ if __name__ == '__main__':
 
         # TODO: TEST
         # I think we can remove noisy cells this way. 
-        # lam_onehot = []
-        # for i in range(mod.I):
-        #     lami_onehot = torch.zeros((lam[i].size(0), lam[i].size(1), K), dtype=torch.int64)
-        #     lam_onehot.append(lami_onehot)
-        #     for b in range(lam_samps):
-        #         lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
-    
-        #     lam_onehot[0]
-        #     lam_onehot[0].double().mean(0)
-        #     lam_onehot[0].double().mean(0).argmax(1) # This should be lam_est
-        #     # Std of lam_i
-        #     lam_onehot[0].double().std(0).sum(1)
-        #     (lam_onehot[0].double().std(0).sum(1) > 1).double().mean()
-        #     idx_noisy = lam_onehot[0].double().std(0).sum(1) > 1
-        #     y[0][1 - idx_noisy, :]
+        lam_onehot = []
+        idx_noisy = []
+        for i in range(mod.I):
+            lami_onehot = torch.zeros((lam[i].size(0), lam[i].size(1), K), dtype=torch.int64)
+            lam_onehot.append(lami_onehot)
+            for b in range(lam_samps):
+                lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
+            # Std of lam_i
+            idx_noisy.append(lam_onehot[i].double().var(0).sum(1) > .5)
+            # quiet cells
+            # y[i][1 - idx_noisy[i], :]
 
         W_mean = W.mean(0)
         Z_mean = Z.mean(0)
