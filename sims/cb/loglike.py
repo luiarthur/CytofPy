@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Normal
 
 # Compute loglikelihood
-def sample(mod, y=None):
+def sample(mod, y=None, each_marker=False):
     # Sample posterior model parameters
     idx = [range(mod.N[i]) for i in range(mod.I)]
     params = mod.sample_params(idx)
@@ -43,9 +43,16 @@ def sample(mod, y=None):
         logmix_L0 = torch.logsumexp(d0, 2)
         logmix_L1 = torch.logsumexp(d1, 2)
 
+        # Ni x J x K
         c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
-        d = c.sum(1)
 
-        ll.append(d + W[i:i+1, :].log())
+        if each_marker:
+            # Ni x J x K
+            ll.append((c + W[i][None, None, :]).logsumexp(2))
+        else:
+            # Ni x K
+            d = c.sum(1)
+            # ll.append(d + W[i:i+1, :].log())
+            ll.append(d + W[i][None, :].log())
 
     return ll
