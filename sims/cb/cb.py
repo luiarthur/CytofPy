@@ -261,24 +261,28 @@ if __name__ == '__main__':
         lam = [torch.stack([lam_b[i] for lam_b in lam]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
 
-        # TODO: TEST
-        # I think we can remove noisy cells this way. 
-        lam_onehot = []
-        idx_noisy = []
-        for i in range(mod.I):
-            lami_onehot = torch.zeros((lam[i].size(0), lam[i].size(1), K), dtype=torch.int64)
-            lam_onehot.append(lami_onehot)
-            for b in range(lam_samps):
-                lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
-            # Std of lam_i
-            idx_noisy.append(lam_onehot[i].double().var(0).sum(1) > .5)
-            # quiet cells
-            # y[i][1 - idx_noisy[i], :]
+        # # TODO: TEST
+        # # I think we can remove noisy cells this way. 
+        # lam_onehot = []
+        # idx_noisy = []
+        # for i in range(mod.I):
+        #     lami_onehot = torch.zeros((lam[i].size(0), lam[i].size(1), K), dtype=torch.int64)
+        #     lam_onehot.append(lami_onehot)
+        #     for b in range(lam_samps):
+        #         lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
+        #     # Std of lam_i
+        #     var_thresh=.4
+        #     idx_noisy.append(lam_onehot[i].double().var(0).sum(1) > var_thresh)
+        #     # quiet cells
+        #     # y[i][1 - idx_noisy[i], :]
 
         W_mean = W.mean(0)
         Z_mean = Z.mean(0)
 
         for i in range(mod.I):
+            # quiet_yi = y[i][1 - idx_noisy[i], :]
+            # quiet_lami = lam_est[i][1 - idx_noisy[i]]
+            # plot_yz(quiet_yi, Z_mean, W_mean[i, :], quiet_lami, w_thresh=.05, cm_y=cm, vlim_y=VLIM)
             plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05, cm_y=cm, vlim_y=VLIM)
             plt.tight_layout()
             plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
