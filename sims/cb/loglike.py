@@ -44,15 +44,15 @@ def sample(mod, y=None, each_marker=False):
         logmix_L1 = torch.logsumexp(d1, 2)
 
         # Ni x J x K
-        c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
+        c = Z[None, :, :] * logmix_L1[:, :, None] + (1 - Z[None, :, :]) * logmix_L0[:, :, None]
 
         if each_marker:
             # Ni x J x K
-            ll.append((c + W[i][None, None, :]).logsumexp(2))
+            ll.append((c + W[i][None, None, :].log()).logsumexp(2))
         else:
             # Ni x K
             d = c.sum(1)
-            # ll.append(d + W[i:i+1, :].log())
+            # loglike for lam[i]
             ll.append(d + W[i][None, :].log())
 
     return ll

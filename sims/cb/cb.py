@@ -1,5 +1,6 @@
 import sys
 import os
+import util
 
 import torch
 from torch.distributions.log_normal import LogNormal
@@ -16,6 +17,8 @@ from matplotlib import gridspec
 import copy
 import numpy as np
 import pickle
+import seaborn as sns
+import dden
 
 # Use smaller learning rate, with double precision
 # https://discuss.pytorch.org/t/why-double-precision-training-sometimes-performs-much-better/31194
@@ -30,11 +33,11 @@ if __name__ == '__main__':
         path_to_exp_results = 'results/sim1-vae/test/'
         SEED = 2
 
-    # subsample = 1.0 # .2
-    subsample = .05
+    subsample = 1.0 # .2
+    # subsample = .05
 
     img_dir = path_to_exp_results + '/img/'
-    os.makedirs('{}'.format(img_dir), exist_ok=True)
+    os.makedirs('{}/dden'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
 
     show_plots = False
@@ -90,14 +93,15 @@ if __name__ == '__main__':
         plt.savefig('{}/y{}.pdf'.format(img_dir, i + 1))
         plt.close()
 
-    K = 30
+    K = 20
     L = [5, 3]
 
     # model.debug=True
     priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
-                                          #y_quantiles=[0, 35, 50], p_bounds=[.05, .8, .05])
-    priors['sig2'] = LogNormal(-1, .1)
+                                          # y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
+                                          # y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
+                                          y_quantiles=[20, 35, 80], p_bounds=[.01, .8, .01])
+    priors['sig2'] = Gamma(.1, 1)
     priors['alpha'] = Gamma(.1, .1)
     priors['delta0'] = Gamma(10, 1)
     priors['delta1'] = Gamma(10, 1)
@@ -126,11 +130,10 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
-                                priors=priors, minibatch_size=2000, tau=0.1,
+        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=0,
+                                priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
-                                # verbose=0, seed=SEED, use_stick_break=False)
-                                verbose=0, seed=0, use_stick_break=False)
+                                verbose=0, seed=SEED, use_stick_break=False)
     # Flush output
     sys.stdout.flush()
 
@@ -256,9 +259,9 @@ if __name__ == '__main__':
 
         # lam posterior
         # lam_samps = 100
-        lam_samps = 100
-        lam = [lam_post.sample(mod) for b in range(lam_samps)]
-        lam = [torch.stack([lam_b[i] for lam_b in lam]) for i in range(mod.I)]
+        lam_samps = 30
+        lam_draws = [lam_post.sample(mod) for b in range(lam_samps)]
+        lam = [torch.stack([lam_b[i] for lam_b in lam_draws]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
 
         # # TODO: TEST
@@ -266,8 +269,7 @@ if __name__ == '__main__':
         # lam_onehot = []
         # idx_noisy = []
         # for i in range(mod.I):
-        #     lami_onehot = torch.zeros((lam[i].size(0), lam[i].size(1), K), dtype=torch.int64)
-        #     lam_onehot.append(lami_onehot)
+        # lam_onehot.append(util.get_one_hot(lam[i], mod.K))
         #     for b in range(lam_samps):
         #         lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
         #     # Std of lam_i
@@ -297,4 +299,28 @@ if __name__ == '__main__':
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
 
+
+        # Posterior predictives estimate
+        # TODO: do the full posterior predictive
+        y_grid, _ = dden.sample(mod, lam_est)
+        y_grid = y_grid.numpy()
+
+        dden_post = [dden.sample(mod, lam_draw)[1] for lam_draw in lam_draws]
+
+        for i in range(mod.I):
+            for j in range(mod.J):
+                dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
+                dden_ij_mean = dden_ij.mean(0)
+                dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
+                dden_ij_upper = np.percentile(dden_ij, 97.5, axis=0)
+                #
+                plt.plot(y_grid, dden_ij_mean, color='blue')
+                plt.fill_between(y_grid, dden_ij_lower, dden_ij_upper, alpha=.5)
+                sns.kdeplot(mod.y_data[i][:, j][1-mod.m[i][:, j]].numpy(), color='lightgrey')
+                plt.title('i: {}, j: {}'.format(i+1, j+1))
+                plt.axvline(0, linestyle='--', color='lightgrey')
+                plt.savefig('{}/dden/dden_i{}_j{}.pdf'.format(img_dir, i + 1, j + 1))
+                plt.close()
+
     print("Done.")
+
