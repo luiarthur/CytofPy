@@ -19,6 +19,7 @@ import numpy as np
 import pickle
 import seaborn as sns
 import dden
+import blue2red
 
 # Use smaller learning rate, with double precision
 # https://discuss.pytorch.org/t/why-double-precision-training-sometimes-performs-much-better/31194
@@ -78,8 +79,7 @@ if __name__ == '__main__':
     # Color map
     cm_greys = plt.cm.get_cmap('Greys', 5)
     VMIN, VMAX = VLIM = (-4, 4) 
-    cm = plt.cm.get_cmap('bwr', 9)
-    cm.set_bad(color='black')
+    cm = blue2red.cm(9)
 
     # Plot yi histograms
     # plt.hist(y[0][:, 1], bins=100, density=True); plt.xlim(-15, 15); plt.show()
