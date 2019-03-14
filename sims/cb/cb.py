@@ -34,8 +34,8 @@ if __name__ == '__main__':
         path_to_exp_results = 'results/sim1-vae/test/'
         SEED = 2
 
-    subsample = 1.0 # .2
-    # subsample = .05
+    # subsample = 1.0 # .2
+    subsample = .05
 
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}/dden'.format(img_dir), exist_ok=True)
@@ -100,7 +100,8 @@ if __name__ == '__main__':
     priors = cytofpy.model.default_priors(y, K=K, L=L,
                                           # y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
                                           # y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
-                                          y_quantiles=[20, 35, 80], p_bounds=[.01, .8, .01])
+                                          # y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01])
+                                          y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01])
     priors['sig2'] = Gamma(.1, 1)
     priors['alpha'] = Gamma(.1, .1)
     priors['delta0'] = Gamma(10, 1)
@@ -130,7 +131,7 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=2000, lr=1e-1, print_freq=10, eps=0,
+        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
                                 priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
@@ -305,6 +306,8 @@ if __name__ == '__main__':
         y_grid, _ = dden.sample(mod, lam_est)
         y_grid = y_grid.numpy()
 
+        # TODO: Consider making this more memory efficient
+        #       by just storing (dden_ij_mean, lower, upper)
         dden_post = [dden.sample(mod, lam_draw)[1] for lam_draw in lam_draws]
 
         for i in range(mod.I):

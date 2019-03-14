@@ -11,6 +11,8 @@ class VAE(torch.nn.Module):
         # Variational parameters
         self.mean = torch.nn.Parameter(torch.ones((1, J)) * mean_init)
         self.log_sd = torch.nn.Parameter((torch.ones((1, J)) * sd_init).log())
+        # self.mean = torch.nn.Parameter(torch.ones((1,  )) * mean_init)
+        # self.log_sd = torch.nn.Parameter((torch.ones((1,  )) * sd_init).log())
 
         # Cached mean and sd. Be cautious when using these!
         self.mean_fn_cached = None
