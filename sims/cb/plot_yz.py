@@ -86,7 +86,7 @@ def plot_yz(yi, Z_mean, wi_mean, lami_est, w_thresh=.01,
     ax2.set_yticks(range(K))
     w_perc = wi_mean[z_cols]
     w_perc = [str((wp * 100).round(w_digits)) + '%' for wp in w_perc]
-    plt.yticks((K-1) / K * np.arange(K) + .5, w_perc, fontsize=fs_w)
+    plt.yticks((K-1) / K * np.arange(K) + .5, w_perc[::-1], fontsize=fs_w)
     plt.yticks()
     ax2.tick_params(length=0)
 

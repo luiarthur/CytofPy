@@ -28,12 +28,14 @@ def is_real(support):
 # TODO: Write a ModelParamList
 
 class ModelParam(abc.ABC):
-    def __init__(self, size, support, m=None, log_s=None):
+    def __init__(self, size, support, m=None, s=None):
         if m is None:
             m = torch.randn(size)
 
-        if log_s is None:
+        if s is None:
             log_s = torch.randn(size)
+        else:
+            log_s = s.log()
 
         self.vp = torch.nn.Parameter(torch.stack([m, log_s]))
         self.size = size

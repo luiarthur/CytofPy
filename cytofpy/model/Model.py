@@ -147,12 +147,14 @@ class Model(VI):
 
         ### Assign Model Parameters###
         self.mp = {}
-        self.mp['delta0'] = ModelParam(self.L[0], 'positive')
-        self.mp['delta1'] = ModelParam(self.L[1], 'positive')
+        self.mp['delta0'] = ModelParam(self.L[0], 'positive',
+                                       m=torch.ones(self.L[0]), s=torch.ones(self.L[0]))
+        self.mp['delta1'] = ModelParam(self.L[1], 'positive',
+                                       m=torch.ones(self.L[1]), s=torch.ones(self.L[1]))
 
         self.mp['sig2'] = ModelParam(self.I, 'positive',
-                                     m=torch.zeros(self.I) * -1.0,
-                                     log_s=torch.zeros(self.I) * -1.0)
+                                     m=torch.ones(self.I) * -1.0,
+                                     s=torch.ones(self.I) * .1)
 
         self.mp['eta0'] = ModelParam((self.I, self.J, self.L[0] - 1), 'simplex')
         self.mp['eta1'] = ModelParam((self.I, self.J, self.L[1] - 1), 'simplex')

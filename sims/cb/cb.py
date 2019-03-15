@@ -132,7 +132,7 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=0,
+        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
                                 priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
@@ -325,6 +325,7 @@ if __name__ == '__main__':
             obs_i = (1 - mod.m[i])[None, :, :, None].double()
             si = ((gam_i_onehot * obs_i).sum(1) / obs_i.sum(1)).mean(0)
             for j in range(mod.J):
+                # TODO: add prop. of missing obs. in plot legend
                 dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
                 dden_ij_mean = dden_ij.mean(0)
                 dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
