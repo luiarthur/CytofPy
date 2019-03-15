@@ -338,7 +338,7 @@ if __name__ == '__main__':
                 plt.title('i: {}, j: {}'.format(i+1, j+1))
                 plt.axvline(0, linewidth=.3, linestyle=':', color='lightgrey')
                 plt.text(.05, .9,
-                         'missing: {:.3f}%'.format(mod.m[i][:, j].double().mean() * 100),
+                         'missing: {:.1f}%'.format(mod.m[i][:, j].double().mean() * 100),
                          ha='left', va='center', transform=plt.gca().transAxes)
                 #
                 s0_ij = np.sqrt(si[j, :mod.L[0]]) * size_range + size_min
