@@ -17,7 +17,7 @@ def sample(mod, lam_draw, y_grid=None):
 
     dden = []
     for i in range(mod.I):
-        gami_onehot = util.get_one_hot(gam[i].numpy(), sum(mod.L))
+        gami_onehot = util.get_one_hot(gam[i], sum(mod.L))
         obs_i = 1 - mod.m[i]
         mu_i = (gami_onehot * mu[None, None, :]).sum(-1)
         dden_i = Normal(mu_i[:, :, None], sig[i]).log_prob(y_grid[None, None, :]).exp()

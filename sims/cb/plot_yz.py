@@ -78,12 +78,7 @@ def plot_yz(yi, Z_mean, wi_mean, lami_est, w_thresh=.01,
     plt.xticks([])
     plt.yticks(np.arange(len(z_cols)), z_cols + 1, fontsize=fs_w)
     add_gridlines_Z(Z_hat)
-
-    ax_divider = make_axes_locatable(ax)
-    # FIXME: UGLY!
-    cax = ax_divider.append_axes("bottom", size="20%", pad="6%")
-    cax.xaxis.set_ticks_position("bottom")
-    colorbar(im, cax=cax, orientation="horizontal")
+    plt.colorbar(orientation='horizontal', pad=.05)
 
     # add wi_mean on right side
     K = z_cols.shape[0]
@@ -94,7 +89,6 @@ def plot_yz(yi, Z_mean, wi_mean, lami_est, w_thresh=.01,
     plt.yticks((K-1) / K * np.arange(K) + .5, w_perc, fontsize=fs_w)
     plt.yticks()
     ax2.tick_params(length=0)
-
 
     fig = plt.gcf()
     fig.subplots_adjust(hspace=0.2)

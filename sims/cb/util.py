@@ -7,7 +7,5 @@ def get_one_hot(targets, nb_classes, use_np=False):
         return res.reshape(list(targets.shape) + [nb_classes])
     else:
         # use torch
-        res = torch.eye(nb_classes)[torch.tensor(targets).reshape(-1)]
+        res = torch.eye(nb_classes)[targets.clone().reshape(-1)]
         return res.reshape(list(targets.shape) + [nb_classes])
-
-
