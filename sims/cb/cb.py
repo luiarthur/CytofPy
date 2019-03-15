@@ -8,6 +8,7 @@ from torch.distributions import Gamma
 
 import cytofpy
 import lam_post
+import gam_post
 from plot_yz import add_gridlines_Z, plot_yz
 import Timer
 
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     plt.close()
 
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=10, eps=0,
+        out = cytofpy.model.fit(y, max_iter=50, lr=1e-1, print_freq=10, eps=0,
                                 priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
@@ -287,8 +288,8 @@ if __name__ == '__main__':
             # quiet_lami = lam_est[i][1 - idx_noisy[i]]
             # plot_yz(quiet_yi, Z_mean, W_mean[i, :], quiet_lami, w_thresh=.05, cm_y=cm, vlim_y=VLIM)
             plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05, cm_y=cm, vlim_y=VLIM)
-            plt.tight_layout()
-            plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
+            # plt.tight_layout()
+            plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1), bbox_inches='tight')
             plt.close()
 
         # Plot imputed ys
@@ -308,20 +309,38 @@ if __name__ == '__main__':
 
         # TODO: Consider making this more memory efficient
         #       by just storing (dden_ij_mean, lower, upper)
+        print('drawing dden')
         dden_post = [dden.sample(mod, lam_draw)[1] for lam_draw in lam_draws]
+        print('drawing gam')
+        gam = [gam_post.sample(mod, lam_draw)[0] for lam_draw in lam_draws]
+        eta0 = torch.stack([p['eta0'] for p in post]).detach().numpy()
+        eta1 = torch.stack([p['eta1'] for p in post]).detach().numpy()
 
+        size_min = 0
+        size_max = 300
+        size_range = size_max - size_min
         for i in range(mod.I):
+            gam_i = torch.stack([gam_draw[i].detach() for gam_draw in gam])
+            gam_i_onehot = util.get_one_hot(gam_i, sum(mod.L))
+            obs_i = (1 - mod.m[i])[None, :, :, None].double()
+            si = ((gam_i_onehot * obs_i).sum(1) / obs_i.sum(1)).mean(0)
             for j in range(mod.J):
                 dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
                 dden_ij_mean = dden_ij.mean(0)
                 dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
                 dden_ij_upper = np.percentile(dden_ij, 97.5, axis=0)
                 #
-                plt.plot(y_grid, dden_ij_mean, color='blue')
-                plt.fill_between(y_grid, dden_ij_lower, dden_ij_upper, alpha=.5)
                 sns.kdeplot(mod.y_data[i][:, j][1-mod.m[i][:, j]].numpy(), color='lightgrey')
+                plt.plot(y_grid, dden_ij_mean, color='purple')
+                plt.fill_between(y_grid, dden_ij_lower, dden_ij_upper, alpha=.5, color='purple')
                 plt.title('i: {}, j: {}'.format(i+1, j+1))
-                plt.axvline(0, linestyle='--', color='lightgrey')
+                plt.axvline(0, linewidth=.3, linestyle=':', color='lightgrey')
+                #
+                s0_ij = np.sqrt(si[j, :mod.L[0]]) * size_range + size_min
+                s1_ij = np.sqrt(si[j, mod.L[0]:]) * size_range + size_min
+                plt.scatter(mu0.mean(0), [0]*mod.L[0], s=s0_ij, alpha=.7, marker='P', linewidth=0, c='blue')
+                plt.scatter(mu1.mean(0), [0]*mod.L[1], s=s1_ij, alpha=.7, marker='X', linewidth=0, c='red')
+                #
                 plt.savefig('{}/dden/dden_i{}_j{}.pdf'.format(img_dir, i + 1, j + 1))
                 plt.close()
 
