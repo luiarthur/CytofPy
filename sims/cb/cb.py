@@ -326,6 +326,7 @@ if __name__ == '__main__':
             si = ((gam_i_onehot * obs_i).sum(1) / obs_i.sum(1)).mean(0)
             for j in range(mod.J):
                 # TODO: add prop. of missing obs. in plot legend
+                # See: https://stackoverflow.com/questions/8482588/putting-text-in-top-left-corner-of-matplotlib-plot
                 dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
                 dden_ij_mean = dden_ij.mean(0)
                 dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
