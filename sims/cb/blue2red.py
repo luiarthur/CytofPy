@@ -6,7 +6,7 @@ from matplotlib.colors import LinearSegmentedColormap
 
 def cm(n=100, cmap_name='blue2red'):
     # Blue -> Grey -> Red
-    colors = [(0, 0, 1), (.85, .85, .85), (1, 0, 0)]
+    colors = [(0, 0, 1), (.9, .9, .9), (1, 0, 0)]
     cm = LinearSegmentedColormap.from_list(cmap_name, colors, N=n)
     cm.set_bad(color='black')
     return cm
