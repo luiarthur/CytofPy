@@ -33,7 +33,7 @@ if __name__ == '__main__':
         SEED = int(sys.argv[2])
     else:
         path_to_exp_results = 'results/sim1-vae/test/'
-        SEED = 2
+        SEED = 0
 
     # subsample = 1.0 # .2
     subsample = .05
@@ -101,8 +101,9 @@ if __name__ == '__main__':
     priors = cytofpy.model.default_priors(y, K=K, L=L,
                                           # y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
                                           # y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
-                                          # y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01])
-                                          y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01])
+                                          y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01]) # BAD
+                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01]) # BAD
+                                          # y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01]) # Good
     priors['sig2'] = Gamma(.1, 1)
     priors['alpha'] = Gamma(.1, .1)
     priors['delta0'] = Gamma(10, 1)
@@ -181,6 +182,8 @@ if __name__ == '__main__':
             Z = (v > torch.distributions.Normal(0, 1).cdf(H)).numpy()
         plt.imshow(Z.mean(0), aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
+        plt.yticks(np.arange(mod.J), np.arange(mod.J) + 1, fontsize=10)
+        plt.xticks(np.arange(mod.K), np.arange(mod.K) + 1, fontsize=10, rotation=90)
         plt.colorbar()
         plt.savefig('{}/Z.pdf'.format(img_dir))
         plt.close()
@@ -343,8 +346,16 @@ if __name__ == '__main__':
                 #
                 s0_ij = np.sqrt(si[j, :mod.L[0]]) * size_range + size_min
                 s1_ij = np.sqrt(si[j, mod.L[0]:]) * size_range + size_min
-                plt.scatter(mu0.mean(0), [0]*mod.L[0], s=s0_ij, alpha=.7, marker='P', linewidth=0, c='blue')
-                plt.scatter(mu1.mean(0), [0]*mod.L[1], s=s1_ij, alpha=.7, marker='X', linewidth=0, c='red')
+                plt.scatter(mu0.mean(0), [0]*mod.L[0], s=s0_ij,
+                            alpha=.7, marker='P', linewidth=0, c='blue')
+                plt.scatter(mu1.mean(0), [0]*mod.L[1], s=s1_ij,
+                            alpha=.7, marker='X', linewidth=0, c='red')
+                #
+                y_ij_mean = vae[i].mean[:, j].detach().numpy()
+                y_ij_sd = vae[i].log_sd[:, j].exp().detach().numpy()
+                plt.scatter(y_ij_mean - 1.96 * y_ij_sd, 0, c='orange', marker='>', alpha=.5, lw=0)
+                # plt.plot(y_ij_mean, 0, color='orange', marker='.', alpha=.5)
+                plt.scatter(y_ij_mean + 1.96 * y_ij_sd, 0, c='orange', marker='<', alpha=.5, lw=0)
                 #
                 plt.savefig('{}/dden/dden_i{}_j{}.pdf'.format(img_dir, i + 1, j + 1))
                 plt.close()
