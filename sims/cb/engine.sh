@@ -25,7 +25,7 @@ function engine() {
   # rmOutput="echo"
 
   # BUNDLE OF COMMANDS TO EXECUTE
-  bundle_cmds="$cmd > $EXP_DIR/log.txt && $syncToS3 && $rmOutput"
+  bundle_cmds="$cmd > $EXP_DIR/log.txt && sleep 2 && $syncToS3 && sleep 2 && $rmOutput"
   echo "Next job: $bundle_cmds"
   sem -j $MAX_CORES $bundle_cmds
 
