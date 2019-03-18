@@ -71,19 +71,20 @@ def default_priors(y, K:int=30, L=None,
     if L is None:
         L = [5, 5]
     
-    b0 = torch.zeros(I)
-    b1 = torch.zeros(I)
-    b2 = torch.zeros(I)
+    b0 = torch.zeros(I, J)
+    b1 = torch.zeros(I, J)
+    b2 = torch.zeros(I, J)
 
     for i in range(I):
-        if y_bounds is None:
-            beta = gen_beta_est(y[i].flatten(), y_quantiles, p_bounds)
-        else:
-            beta = solve_beta(np.array(y_bounds), p_bounds)
+        for j in range(J):
+            if y_bounds is None:
+              beta = gen_beta_est(y[i][:, j].flatten(), y_quantiles, p_bounds)
+            else:
+                beta = solve_beta(np.array(y_bounds), p_bounds)
 
-        b0[i] = beta[0]
-        b1[i] = beta[1]
-        b2[i] = beta[2]
+            b0[i, j] = beta[0]
+            b1[i, j] = beta[1]
+            b2[i, j] = beta[2]
 
 
     return {'I': I, 'J': J, 'N': N, 'L': L, 'K': K,
@@ -272,9 +273,9 @@ class Model(VI):
                     mi = self.m[i][idx[i], :]
                     if mi.sum() > 0:
                         pm_i = prob_miss(reals['y'][i],
-                                         self.b0[i],
-                                         self.b1[i],
-                                         self.b2[i])
+                                         self.b0[i][None, :],
+                                         self.b1[i][None, :],
+                                         self.b2[i][None, :])
                         lp_yi = pm_i[mi].log().mean()
 
                         fac = self.msum[i] 
