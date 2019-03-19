@@ -162,6 +162,7 @@ if __name__ == '__main__':
                                   tau=out['tau'], use_stick_break=use_stick_break)
         mod.mp = out['mp']
         vae = out['vae']
+        mod.y_vae =vae
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
