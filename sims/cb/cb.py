@@ -12,9 +12,12 @@ import gam_post
 from plot_yz import add_gridlines_Z, plot_yz
 import Timer
 
-import math
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import matplotlib 
+matplotlib.use('Agg')
+
+import math
 import copy
 import numpy as np
 import pickle
