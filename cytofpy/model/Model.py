@@ -312,12 +312,6 @@ class Model(VI):
                 #     reals['y'].append(yi)
             else:
                 reals[key] = self.mp[key].real_sample()
-                if self.mp[key].support in ['simplex', 'unit_interval']:
-                    # NOTE: This prevents nan's in elbo and gradients.
-                    #       This should not influence inference.
-                    reals[key] = reals[key].clamp(min=-20, max=20)
-                    if self.verbose >= 999:
-                        print('WARNING: Clamping real {} to have magnitude of 20!'.format(key))
 
         reals['y'] = []
         for i in range(self.I):

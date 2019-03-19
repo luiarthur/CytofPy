@@ -43,7 +43,9 @@ class ModelParam(abc.ABC):
 
     def dist(self):
         if self.support in ['simplex', 'unit_interval']:
-            return Normal(self.vp[0], self.vp[1].sigmoid()*10)
+            # NOTE: This prevents nan's in elbo and gradients.
+            #       This should not influence inference.
+            return Normal(self.vp[0].sigmoid()*20-10, self.vp[1].sigmoid()*10)
         else:
             return Normal(self.vp[0], self.vp[1].exp())
 
