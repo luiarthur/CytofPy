@@ -104,9 +104,9 @@ if __name__ == '__main__':
     priors = cytofpy.model.default_priors(y, K=K, L=L,
                                           # y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
                                           # y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
-                                          y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01]) # BAD
+                                          # y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01]) # BAD
                                           # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01]) # BAD
-                                          # y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01]) # Good
+                                          y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01]) # Good
                                           # y_quantiles=[40, 50, 60], p_bounds=[.01, .8, .01]) # Good
     priors['sig2'] = Gamma(.1, 1)
     priors['alpha'] = Gamma(.1, .1)
