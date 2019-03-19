@@ -4,7 +4,7 @@ import util
 
 import torch
 from torch.distributions.log_normal import LogNormal
-from torch.distributions import Gamma
+from torch.distributions import Gamma, Dirichlet, Beta, Normal
 
 import cytofpy
 import lam_post
@@ -104,10 +104,10 @@ if __name__ == '__main__':
     priors = cytofpy.model.default_priors(y, K=K, L=L,
                                           # y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
                                           # y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
-                                          # y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01]) # BAD
+                                          y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01]) # BAD
                                           # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01]) # BAD
                                           # y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01]) # Good
-                                          y_quantiles=[40, 50, 60], p_bounds=[.01, .8, .01]) # Good
+                                          # y_quantiles=[40, 50, 60], p_bounds=[.01, .8, .01]) # Good
     priors['sig2'] = Gamma(.1, 1)
     priors['alpha'] = Gamma(.1, .1)
     priors['delta0'] = Gamma(10, 1)
@@ -135,6 +135,10 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.savefig('{}/prob_miss.pdf'.format(img_dir, i+1))
     plt.close()
+
+    print('\nPriors & Constants:')
+    for key in priors:
+        print('{}: {}'.format(key, util.pretty_dist(priors[key])), flush=True)
 
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=0,
