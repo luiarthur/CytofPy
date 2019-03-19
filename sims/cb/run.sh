@@ -16,7 +16,7 @@ MAX_CORES=32
 STAGGER=10
 
 # RANDOM SEEDS TO USE IN RUNS
-SEEDS=`seq -w 10`
+SEEDS=`seq -w 30`
 
 
 ### MAIN ###
