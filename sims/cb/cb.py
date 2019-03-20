@@ -101,13 +101,15 @@ if __name__ == '__main__':
     L = [5, 3]
 
     # model.debug=True
-    priors = cytofpy.model.default_priors(y, K=K, L=L,
-                                          # y_quantiles=[0, 5, 15], p_bounds=[.05, .8, .05])
-                                          # y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05])
-                                          # y_quantiles=[0, 35, 70], p_bounds=[.01, .8, .01]) # BAD
-                                          # y_quantiles=[0, 25, 50], p_bounds=[.01, .8, .01]) # BAD
-                                          # y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01]) # Good
-                                          y_quantiles=[40, 50, 60], p_bounds=[.01, .8, .01]) # BEST
+
+    # y_quantiles=[0, 5, 15]; p_bounds=[.05, .8, .05]
+    # y_quantiles=[0, 35, 70]; p_bounds=[.05, .8, .05]
+    # y_quantiles=[0, 35, 70]; p_bounds=[.01, .8, .01] # BAD
+    # y_quantiles=[0, 25, 50]; p_bounds=[.01, .8, .01] # BAD
+    # y_quantiles=[30, 50, 70]; p_bounds=[.01, .8, .01] # Good
+    y_quantiles=[40, 50, 60]; p_bounds=[.01, .8, .01] # BEST
+    priors = cytofpy.model.default_priors(y, K=K, L=L, y_quantiles=y_quantiles, p_bounds=p_bounds)
+
     priors['sig2'] = Gamma(.1, 1)
     # priors['alpha'] = Gamma(.1, .1)
     priors['alpha'] = Gamma(2, .1)
@@ -137,7 +139,9 @@ if __name__ == '__main__':
     plt.savefig('{}/prob_miss.pdf'.format(img_dir, i+1))
     plt.close()
 
-    print('\nPriors & Constants:')
+    print('\nPriors & Constants:', flush=True)
+    print('y_quantiles: {}'.format(y_quantiles), flush=True)
+    print('p_bounds: {}'.format(p_bounds), flush=True)
     for key in priors:
         print('{}: {}'.format(key, util.pretty_dist(priors[key])), flush=True)
 
