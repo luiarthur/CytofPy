@@ -97,7 +97,7 @@ if __name__ == '__main__':
         plt.savefig('{}/y{}.pdf'.format(img_dir, i + 1))
         plt.close()
 
-    K = 20
+    K = 30
     L = [5, 3]
 
     # model.debug=True
