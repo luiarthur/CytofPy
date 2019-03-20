@@ -1,5 +1,5 @@
 SHELL:=/bin/bash
-.PHONY: getData test run clean retrieve retrieveAll elbos
+.PHONY: getData test run clean retrieve retrieveAll metrics
 
 # EXPERIMENT NAME
 EXP_NAME = sim1-vae
@@ -38,5 +38,7 @@ retrieve:
 retrieveAll:
 	aws s3 sync $(AWS_BUCKET) $(RESULTS_DIR)
 
-elbos:
-	python3 parse_elbos.py results/$(EXP_NAME)
+metrics:
+	python3 parse_metrics.py results/$(EXP_NAME) elbo
+	python3 parse_metrics.py results/$(EXP_NAME) ll
+	python3 parse_metrics.py results/$(EXP_NAME) logpost
