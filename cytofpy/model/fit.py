@@ -30,7 +30,7 @@ def check_nan_in_grad(mp, key, fixed_grad, i=None):
         fixed_grad[0] = True
 
 def update(opt, mod, idx):
-    elbo = mod(idx)
+    elbo, ll, lp, lq= mod(idx)
     loss = -elbo
     opt.zero_grad()
     loss.backward()
@@ -45,7 +45,7 @@ def update(opt, mod, idx):
             check_nan_in_grad(mod.mp, key, fixed_grad)
 
     opt.step()
-    return elbo, fixed_grad[0]
+    return elbo, fixed_grad[0], ll, lp, lq
 
 def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         print_freq=10, seed=1, y_mean_init=-3.0, y_sd_init=0.1,
@@ -101,13 +101,13 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
             idx.append(idx_i)
 
         # Update Model parameters
-        elbo, fixed_grad = update(optimizer, model, idx)
+        elbo, fixed_grad, ll, lp, lq = update(optimizer, model, idx)
         elbo_hist.append(elbo.item())
         elbo_good = not fixed_grad
 
         if t % print_freq == 0:
-            print('{} | iteration: {}/{} | elbo: {}'.format(
-                datetime.datetime.now(), t, max_iter, elbo_hist[-1]))
+            print('{} | iter: {}/{} | elbo: {:.3f} | ll: {:.3f} | logpost: {:.3f}'.format(
+                datetime.datetime.now(), t, max_iter, elbo_hist[-1], ll, ll+lp))
 
         # if t > 10 and math.isnan(elbo_hist[-1]):
         #     print('nan in elbo. Exiting early.')

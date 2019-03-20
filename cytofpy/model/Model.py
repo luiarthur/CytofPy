@@ -350,6 +350,8 @@ class Model(VI):
     def forward(self, idx):
         reals = self.sample_reals(idx)
         params = self.transform(reals)
-        elbo = self.loglike(params, idx) + self.log_prior(reals, params, idx)
-        elbo -= self.log_q(reals, idx)
-        return elbo
+        ll = self.loglike(params, idx)
+        lp = self.log_prior(reals, params, idx)
+        lq = self.log_q(reals, idx)
+        elbo = ll + lp - lq
+        return elbo, ll.detach().item(), lp.detach().item(), lq.detach().item()
