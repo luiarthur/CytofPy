@@ -109,7 +109,8 @@ if __name__ == '__main__':
                                           # y_quantiles=[30, 50, 70], p_bounds=[.01, .8, .01]) # Good
                                           y_quantiles=[40, 50, 60], p_bounds=[.01, .8, .01]) # BEST
     priors['sig2'] = Gamma(.1, 1)
-    priors['alpha'] = Gamma(.1, .1)
+    # priors['alpha'] = Gamma(.1, .1)
+    priors['alpha'] = Gamma(2, .1)
     priors['delta0'] = Gamma(10, 1)
     priors['delta1'] = Gamma(10, 1)
 
