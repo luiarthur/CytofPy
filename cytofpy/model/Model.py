@@ -111,6 +111,10 @@ class Model(VI):
 
         self.verbose = verbose
 
+        if self.verbose >= 0:
+            print('use_stick_break: {}'.format(use_stick_break))
+            print('tau: {}'.format(tau))
+
         # Use stick breaking construction of IBP
         self.use_stick_break = use_stick_break
 
