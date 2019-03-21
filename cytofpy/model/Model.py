@@ -354,4 +354,4 @@ class Model(VI):
         lp = self.log_prior(reals, params, idx)
         lq = self.log_q(reals, idx)
         elbo = ll + lp - lq
-        return elbo, ll.detach().item(), lp.detach().item(), lq.detach().item()
+        return elbo, ll.item(), lp.item(), lq.item()
