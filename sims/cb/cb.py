@@ -38,8 +38,9 @@ if __name__ == '__main__':
         path_to_exp_results = 'results/sim1-vae/test/'
         SEED = 0
 
-    subsample = 1.0
-    # subsample = .05
+    # TODO: full data
+    # subsample = 1.0
+    subsample = .05
 
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}/dden'.format(img_dir), exist_ok=True)
@@ -145,8 +146,9 @@ if __name__ == '__main__':
     for key in priors:
         print('{}: {}'.format(key, util.pretty_dist(priors[key])), flush=True)
 
+    # TODO: max_iter = 10000, minibatch_size=2000
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps=0,
+        out = cytofpy.model.fit(y, max_iter=3000, lr=1e-1, print_freq=10, eps_conv=0,
                                 priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
@@ -164,10 +166,13 @@ if __name__ == '__main__':
         elbo = out['elbo']
         use_stick_break = out['use_stick_break']
         mod = cytofpy.model.Model(y=y, priors=priors,
-                                  tau=out['tau'], use_stick_break=use_stick_break)
+                                  tau=out['tau'],
+                                  use_stick_break=use_stick_break,
+                                  model_noisy=out['model_noisy'])
         mod.mp = out['mp']
         vae = out['vae']
         mod.y_vae =vae
+        model_noisy = out['model_noisy']
 
         plt.plot(elbo)
         plt.ylabel('ELBO / NSUM')
@@ -213,6 +218,15 @@ if __name__ == '__main__':
         plt.axvline(mu0.shape[1] + .5)
         plt.savefig('{}/mu.pdf'.format(img_dir))
         plt.close()
+
+        # Plot eps
+        if model_noisy:
+            eps = torch.stack([p['eps'] for p in post]).detach().numpy()
+            plt.boxplot(eps, showmeans=True, whis=[2.5, 97.5], showfliers=False)
+            plt.xlabel('eps', fontsize=15)
+            plt.savefig('{}/eps.pdf'.format(img_dir))
+            plt.close()
+
 
         # Plot sig
         sig2 = torch.stack([p['sig2'] for p in post]).detach().numpy()
@@ -283,20 +297,6 @@ if __name__ == '__main__':
         lam = [torch.stack([lam_b[i] for lam_b in lam_draws]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
 
-        # # TODO: TEST
-        # # I think we can remove noisy cells this way. 
-        # lam_onehot = []
-        # idx_noisy = []
-        # for i in range(mod.I):
-        # lam_onehot.append(util.get_one_hot(lam[i], mod.K))
-        #     for b in range(lam_samps):
-        #         lam_onehot[i][b, torch.arange(mod.N[i]), lam[i][b]] = 1
-        #     # Std of lam_i
-        #     var_thresh=.4
-        #     idx_noisy.append(lam_onehot[i].double().var(0).sum(1) > var_thresh)
-        #     # quiet cells
-        #     # y[i][1 - idx_noisy[i], :]
-
         W_mean = W.mean(0)
         Z_mean = Z.mean(0)
 
@@ -320,7 +320,6 @@ if __name__ == '__main__':
 
 
         # Posterior predictives estimate
-        # TODO: do the full posterior predictive
         y_grid, _ = dden.sample(mod, lam_est)
         y_grid = y_grid.numpy()
 
@@ -342,8 +341,6 @@ if __name__ == '__main__':
             obs_i = (1 - mod.m[i])[None, :, :, None].double()
             si = ((gam_i_onehot * obs_i).sum(1) / obs_i.sum(1)).mean(0)
             for j in range(mod.J):
-                # TODO: add prop. of missing obs. in plot legend
-                # See: https://stackoverflow.com/questions/8482588/putting-text-in-top-left-corner-of-matplotlib-plot
                 dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
                 dden_ij_mean = dden_ij.mean(0)
                 dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)

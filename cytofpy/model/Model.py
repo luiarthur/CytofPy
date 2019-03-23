@@ -103,17 +103,24 @@ def default_priors(y, K:int=30, L=None,
             'b1': b1,
             'b2': b2,
             #
-            'W': Dirichlet(torch.ones(K) / K)}
+            'noisy_var': 10.0,
+            #
+            'W': Dirichlet(torch.ones(K) / K),
+            #
+            'eps': Beta(torch.ones(I) * 5, torch.ones(I) * 95)
+            }
 
 class Model(VI):
     def __init__(self, y, priors, m=None, y_mean_init=-3.0, y_sd_init=0.1,
-                 tau=0.1, verbose=1, use_stick_break=True):
+                 tau=0.1, verbose=1, use_stick_break=True, model_noisy=True):
 
+        self.model_noisy = model_noisy
         self.verbose = verbose
 
         if self.verbose >= 0:
             print('use_stick_break: {}'.format(use_stick_break))
             print('tau: {}'.format(tau))
+            print('model_noisy: {}'.format(model_noisy))
 
         # Use stick breaking construction of IBP
         self.use_stick_break = use_stick_break
@@ -135,6 +142,9 @@ class Model(VI):
         self.L = priors['L']
         self.K = priors['K']
 
+        # Noisy variance
+        self.noisy_sd = torch.sqrt(torch.tensor(priors['noisy_var']))
+
         # Store priors
         self.priors = priors
 
@@ -155,6 +165,9 @@ class Model(VI):
                                        m=torch.ones(self.L[0]), s=torch.ones(self.L[0]))
         self.mp['delta1'] = ModelParam(self.L[1], 'positive',
                                        m=torch.ones(self.L[1]), s=torch.ones(self.L[1]))
+
+        if self.model_noisy:
+            self.mp['eps'] = ModelParam(self.I, 'unit_interval')
 
         self.mp['sig2'] = ModelParam(self.I, 'positive',
                                      m=torch.ones(self.I) * -1.0,
@@ -224,10 +237,18 @@ class Model(VI):
 
             f = d + params['W'][i:i+1, :].log()
 
-            fac = self.N[i] / self.Nsum 
-            lli = torch.logsumexp(f, 1).mean(0) * fac
+            # Ni-dim
+            lli = torch.logsumexp(f, 1)
 
-            assert(lli.dim() == 0)
+            fac = self.N[i] / self.Nsum 
+            if self.model_noisy:
+                lli_quiet = lli + torch.log1p(-params['eps'][i])
+                lli_quiet = lli_quiet.mean(0) * fac
+                lli_noisy = Normal(0, self.noisy_sd).log_prob(y[i]).sum(1) + params['eps'][i].log()
+                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(1).mean(0) * fac
+            else:
+                # lli = torch.logsumexp(f, 1).mean(0) * fac
+                lli = lli.mean(0) * fac
 
             ll += lli
 
@@ -303,18 +324,7 @@ class Model(VI):
     def sample_reals(self, idx):
         reals = {}
         for key in self.mp:
-            if key == 'y':
-                pass 
-                # reals['y'] = []
-                # for i in range(self.I):
-                #     mi = self.m[i][idx[i], :].double()
-                #     yi_vp = self.mp['y'][i].vp[:, idx[i], :]
-                #     yi = Normal(yi_vp[0], yi_vp[1].exp()).rsample()
-                #     # NOTE: A trick to prevent computation of gradients for
-                #     #       observed values
-                #     yi = mi * yi + (1 - mi) * yi.detach()
-                #     reals['y'].append(yi)
-            else:
+            if key != 'y':
                 reals[key] = self.mp[key].real_sample()
 
         reals['y'] = []

@@ -49,9 +49,9 @@ def update(opt, mod, idx):
 
 def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
         print_freq=10, seed=1, y_mean_init=-3.0, y_sd_init=0.1,
-        trace_every=None, eps=1e-6, tau=0.1, backup_every=10,
+        trace_every=None, eps_conv=1e-6, tau=0.1, backup_every=10,
         y_quantiles=[0, 35, 70], p_bounds=[.05, .8, .05],
-        use_stick_break=True, init_mp=None, verbose=1, flush=True):
+        use_stick_break=True, model_noisy=True, init_mp=None, verbose=1, flush=True):
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -69,7 +69,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
                                               y_quantiles=y_quantiles, p_bounds=p_bounds)
 
     model = Model(y=y, m=m, priors=priors, tau=tau, verbose=verbose,
-                  use_stick_break=use_stick_break,
+                  use_stick_break=use_stick_break, model_noisy=model_noisy,
                   y_mean_init=y_mean_init, y_sd_init=y_sd_init)
 
     if init_mp is not None:
@@ -126,7 +126,7 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
                     mp[key] = copy.deepcopy(model.mp[key])
             trace.append(mp)
 
-        if t > 10 and abs(elbo_hist[-1] / elbo_hist[-2] - 1) < eps:
+        if t > 10 and abs(elbo_hist[-1] / elbo_hist[-2] - 1) < eps_conv:
             print('Convergence suspected! Ending optimizer early.')
             break
 
@@ -138,4 +138,4 @@ def fit(y, minibatch_size=500, priors=None, max_iter=1000, lr=1e-1,
     #        I could before...
     return {'elbo': elbo_hist, 'trace': trace, 'mp': best_mp, 'tau': tau,
             'vae': best_vae, 'use_stick_break': use_stick_break, 'y': y,
-            'priors': str(model.priors)}
+            'priors': str(model.priors), 'model_noisy': model_noisy}
