@@ -244,11 +244,11 @@ class Model(VI):
 
             fac = self.N[i] / self.Nsum 
             if self.model_noisy:
-                # eps_i = params['eps'[i]
-                eps_i = torch.tensor(.05)
+                eps_i = params['eps'][i]
+                # eps_i = torch.tensor(1e-6)
                 lli_quiet = lli + torch.log1p(-eps_i)
                 lli_noisy = Normal(0, self.noisy_sd).log_prob(y[i]).sum(1) + eps_i.log()
-                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(1).mean(0) * fac
+                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(0).mean(0) * fac
             else:
                 # lli = torch.logsumexp(f, 1).mean(0) * fac
                 lli = lli.mean(0) * fac

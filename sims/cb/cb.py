@@ -38,9 +38,7 @@ if __name__ == '__main__':
         path_to_exp_results = 'results/sim1-vae/test/'
         SEED = 0
 
-    # TODO: full data
-    # subsample = 1.0
-    subsample = .05
+    subsample = 1.0
 
     img_dir = path_to_exp_results + '/img/'
     os.makedirs('{}/dden'.format(img_dir), exist_ok=True)
@@ -114,8 +112,8 @@ if __name__ == '__main__':
     priors['sig2'] = Gamma(.1, 1)
     # priors['alpha'] = Gamma(.1, .1)
     priors['alpha'] = Gamma(2, .1)
-    priors['delta0'] = Gamma(10, 1)
-    priors['delta1'] = Gamma(10, 1)
+    priors['delta0'] = Gamma(1, 1)
+    priors['delta1'] = Gamma(1, 1)
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 1, .1)

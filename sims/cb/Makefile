@@ -2,7 +2,7 @@ SHELL:=/bin/bash
 .PHONY: getData test run clean retrieve retrieveAll metrics
 
 # EXPERIMENT NAME
-EXP_NAME = sim1-vae-fulldata
+EXP_NAME = sim1-noisyclass-fulldata
 
 # RESULTS DIRECTORY
 RESULTS_DIR = results/$(EXP_NAME)
