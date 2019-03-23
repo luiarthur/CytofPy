@@ -167,7 +167,9 @@ class Model(VI):
                                        m=torch.ones(self.L[1]), s=torch.ones(self.L[1]))
 
         if self.model_noisy:
-            self.mp['eps'] = ModelParam(self.I, 'unit_interval')
+            self.mp['eps'] = ModelParam(self.I, 'unit_interval',
+                                        m=torch.ones(self.I) * priors['eps'].mean,
+                                        s=torch.ones(self.I) * .001)
 
         self.mp['sig2'] = ModelParam(self.I, 'positive',
                                      m=torch.ones(self.I) * -1.0,
@@ -242,9 +244,10 @@ class Model(VI):
 
             fac = self.N[i] / self.Nsum 
             if self.model_noisy:
-                lli_quiet = lli + torch.log1p(-params['eps'][i])
-                lli_quiet = lli_quiet.mean(0) * fac
-                lli_noisy = Normal(0, self.noisy_sd).log_prob(y[i]).sum(1) + params['eps'][i].log()
+                # eps_i = params['eps'[i]
+                eps_i = torch.tensor(.05)
+                lli_quiet = lli + torch.log1p(-eps_i)
+                lli_noisy = Normal(0, self.noisy_sd).log_prob(y[i]).sum(1) + eps_i.log()
                 lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(1).mean(0) * fac
             else:
                 # lli = torch.logsumexp(f, 1).mean(0) * fac
