@@ -114,6 +114,7 @@ if __name__ == '__main__':
     priors['alpha'] = Gamma(2, .1)
     priors['delta0'] = Gamma(1, 1)
     priors['delta1'] = Gamma(1, 1)
+    priors['noisy_var'] = 1.0
 
     # Missing Mechanism
     ygrid = torch.arange(-8, 1, .1)

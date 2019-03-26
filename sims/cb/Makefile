@@ -31,7 +31,7 @@ test:
 	python3 cb.py $(TEST_DIR) 2 > $(TEST_DIR)/log.txt
 
 clean:
-	rm -rf results
+	rm -rf $(RESULTS_DIR)
 
 retrieve: 
 	aws s3 sync $(AWS_BUCKET) $(RESULTS_DIR) --exclude "*/out.p*"
