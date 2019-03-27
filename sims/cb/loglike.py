@@ -2,7 +2,7 @@ import torch
 from torch.distributions import Normal
 
 # Compute loglikelihood
-def sample(mod, y=None, each_marker=False):
+def sample(mod, y=None):
     # Sample posterior model parameters
     idx = [range(mod.N[i]) for i in range(mod.I)]
     params = mod.sample_params(idx)
@@ -46,13 +46,20 @@ def sample(mod, y=None, each_marker=False):
         # Ni x J x K
         c = Z[None, :, :] * logmix_L1[:, :, None] + (1 - Z[None, :, :]) * logmix_L0[:, :, None]
 
-        if each_marker:
-            # Ni x J x K
-            ll.append((c + W[i][None, None, :].log()).logsumexp(2))
-        else:
-            # Ni x K
-            d = c.sum(1)
-            # loglike for lam[i]
-            ll.append(d + W[i][None, :].log())
+        # Ni x K
+        d = c.sum(1)
+        # loglike for lam[i]
+        lli = d + W[i][None, :].log()
+
+        # TODO: Implement this
+        # if mod.model_noisy:
+        #     eps_i = params['eps'][i].detach()
+        #     lli_quiet = lli + torch.log1p(-eps_i)
+        #     lli_noisy = Normal(0, mod.noisy_sd).log_prob(yi).sum(1) + eps_i.log()
+        #     # lli = torch.cat([lli_noisy, lli_quiet], dim=-1)
+        #     lli = torch.cat([lli_quiet, lli_noisy], dim=-1)
+        # else:
+        #     ll.append(lli)
+        ll.append(lli)
 
     return ll
