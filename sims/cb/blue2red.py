@@ -12,7 +12,7 @@ def cm(n=100, cmap_name='blue2red'):
     return cm
 
 # Example:
-# cm_b2r = blue2red(9)
+# cm_b2r = cm(9)
 # X = np.random.randn(100,5)
 # plt.imshow(X, aspect='auto', vmin=-3, vmax=3, cmap=cm_b2r)
 # plt.colorbar()
