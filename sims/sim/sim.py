@@ -71,9 +71,9 @@ if __name__ == '__main__':
 
     # model.debug=True
     priors = cytofpy.model.default_priors(y, K=K, L=L)
-    out = cytofpy.model.fit(y, max_iter=5000, lr_g=1e-1, lr_l=1e-2, print_freq=10, eps=1e-6,
-                           priors=priors, minibatch_size=100, tau=0.1,
-                           verbose=0, seed=1)
+    out = cytofpy.model.fit(y, max_iter=5000, lr=1e-1, print_freq=1, eps=1e-6,
+                            priors=priors, minibatch_size=100000, tau=0.1,
+                            verbose=0, seed=1)
 
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
