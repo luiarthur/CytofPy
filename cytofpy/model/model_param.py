@@ -29,6 +29,8 @@ def is_real(support):
 
 class ModelParam(abc.ABC):
     def __init__(self, size, support, m=None, s=None):
+        # TODO:
+        # change init based on support
         if m is None:
             m = torch.randn(size)
 

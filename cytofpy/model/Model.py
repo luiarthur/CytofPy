@@ -107,7 +107,7 @@ def default_priors(y, K:int=30, L=None,
             #
             'W': Dirichlet(torch.ones(K) / K),
             #
-            'eps': Beta(torch.ones(I) * 5, torch.ones(I) * 95)
+            'eps': Beta(torch.ones(I) * 1, torch.ones(I) * 99)
             }
 
 class Model(VI):
