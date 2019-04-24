@@ -7,7 +7,6 @@ from torch.distributions.log_normal import LogNormal
 from torch.distributions import Gamma, Dirichlet, Beta, Normal
 
 import cytofpy
-import lam_post
 import gam_post
 from plot_yz import add_gridlines_Z, plot_yz
 import Timer
@@ -24,6 +23,8 @@ import pickle
 import seaborn as sns
 import dden
 import blue2red
+
+from cytofpy.model import post_proc
 
 # Use smaller learning rate, with double precision
 # https://discuss.pytorch.org/t/why-double-precision-training-sometimes-performs-much-better/31194
@@ -148,7 +149,7 @@ if __name__ == '__main__':
     # TODO: max_iter = 10000, minibatch_size=2000
     with Timer.Timer('Model training'):
         out = cytofpy.model.fit(y, max_iter=10000, lr=1e-1, print_freq=10, eps_conv=0,
-                                priors=priors, minibatch_size=2000, tau=0.1,
+                                priors=priors, minibatch_size=500, tau=0.1,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
     # Flush output
@@ -290,11 +291,17 @@ if __name__ == '__main__':
         plt.close()
 
         # lam posterior
+        def draw_theta():
+            return post_proc.sample_params.theta(mod, priors)[0]
+
         # lam_samps = 100
         lam_samps = 30
-        lam_draws = [lam_post.sample(mod) for b in range(lam_samps)]
+        lam_draws = [post_proc.lam_post.sample(draw_theta(), mod) for b in range(lam_samps)]
         lam = [torch.stack([lam_b[i] for lam_b in lam_draws]) for i in range(mod.I)]
         lam_est = [lam_i.mode(0)[0] for lam_i in lam]
+
+        # TODO: now, lam in {0, ..., K}
+        # See if the other graphs are affected.
 
         W_mean = W.mean(0)
         Z_mean = Z.mean(0)

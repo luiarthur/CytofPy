@@ -221,23 +221,24 @@ class Model(VI):
             logmix_L0 = torch.logsumexp(d0, 2)
             logmix_L1 = torch.logsumexp(d1, 2)
 
-            # Z: J x K
-            # H: J x K
             # v: K
-            # c: Ni x J x K
-            # d: Ni x K
-            # Ni x J x K
-
             if self.use_stick_break:
                 v = params['v'].cumprod(0)
             else:
                 v = params['v']
+
+            # Z: J x K
+            # H: J x K
             Z = compute_Z(v[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
 
-            c = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
-            d = c.sum(1)
+            # Z_mix: Ni x J x K
+            Z_mix = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
 
-            f = d + params['W'][i:i+1, :].log()
+            # Z_mix_sum: Ni x K
+            Z_mix_sum = Z_mix.sum(1)
+
+            # f: Ni x J x K
+            f = Z_mix_sum + params['W'][i:i+1, :].log()
 
             # Ni-dim
             lli = torch.logsumexp(f, 1)

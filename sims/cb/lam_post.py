@@ -1,3 +1,4 @@
+# TODO: remove this file, use post_proc.lam_post instead.
 import torch
 from torch.distributions import Normal
 from torch.distributions import Categorical
