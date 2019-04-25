@@ -12,8 +12,11 @@ def relabel_lam(lami_est, wi_mean):
     k_ord = wi_mean.argsort()
     lami_new = lami_est + 0
     counts = []
-    for k in range(K):
-        idx_k = lami_est == k_ord[k]
+    for k in range(K + 1):
+        if k == 0:
+            idx_k = (lami_est == 0)
+        else:
+            idx_k = (lami_est - 1 == k_ord[k - 1])
         lami_new[idx_k] = k
         counts.append(idx_k.sum())
     return (lami_new, counts)
