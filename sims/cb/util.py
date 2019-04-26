@@ -26,8 +26,8 @@ def pretty_dist(D, warn=False):
         scale = D.scale
         out = 'LogNormal(loc: {}, scale: {})'.format(loc, scale)
     elif isinstance(D, Beta):
-        a = D.concentration0
-        b = D.concentration1
+        a = D.concentration1
+        b = D.concentration0
         out = 'Beta(a: {}, b: {})'.format(a, b)
     elif isinstance(D, Dirichlet):
         conc = D.concentration
