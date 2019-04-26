@@ -243,7 +243,7 @@ class Model(VI):
             # Ni-dim
             lli = torch.logsumexp(f, 1)
 
-            fac = self.N[i] / self.Nsum 
+            fac = self.N[i]
             if self.model_noisy:
                 eps_i = params['eps'][i]
                 # eps_i = torch.tensor(1e-6)
@@ -255,6 +255,8 @@ class Model(VI):
                 lli = lli.mean(0) * fac
 
             ll += lli
+
+        ll /= self.Nsum
 
         if self.verbose >= 1:
             print('log_like: {}'.format(ll))
@@ -288,10 +290,11 @@ class Model(VI):
             else:
                 out += self.mp[key].log_q(reals[key])
 
+        out /= self.Nsum
         if self.verbose >= 1:
-            print('log_q: {}'.format(out / self.Nsum))
+            print('log_q: {}'.format(out))
 
-        return out / self.Nsum
+        return out
 
     def log_prior(self, reals, params, idx):
         out = 0.0
@@ -320,10 +323,11 @@ class Model(VI):
                 tmp += self.mp[key].logabsdetJ(reals[key], params[key])
                 out += tmp.sum()
 
+        out /= self.Nsum
         if self.verbose >= 1:
-            print('log_prior: {}'.format(out / self.Nsum))
+            print('log_prior: {}'.format(out))
 
-        return out / self.Nsum
+        return out
 
     def sample_reals(self, idx):
         reals = {}
