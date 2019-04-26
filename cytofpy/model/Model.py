@@ -107,7 +107,7 @@ def default_priors(y, K:int=30, L=None,
             #
             'W': Dirichlet(torch.ones(K) / K),
             #
-            'eps': Beta(torch.ones(I) * 1, torch.ones(I) * 99)
+            'eps': Beta(1, 99)
             }
 
 class Model(VI):
@@ -243,16 +243,16 @@ class Model(VI):
             # Ni-dim
             lli = torch.logsumexp(f, 1)
 
-            fac = self.N[i]
+            fac = self.N[i] / y[i].size(0)
             if self.model_noisy:
                 eps_i = params['eps'][i]
                 # eps_i = torch.tensor(1e-6)
                 lli_quiet = lli + torch.log1p(-eps_i)
                 lli_noisy = Normal(0, self.noisy_sd).log_prob(y[i]).sum(1) + eps_i.log()
-                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(0).mean(0) * fac
+                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(0).sum(0) * fac
             else:
                 # lli = torch.logsumexp(f, 1).mean(0) * fac
-                lli = lli.mean(0) * fac
+                lli = lli.sum(0) * fac
 
             ll += lli
 
@@ -280,12 +280,15 @@ class Model(VI):
                             print('y{}_vp_m: {}'.format(i, y_vp_m[0]))
                             print('y{}_vp_s: {}'.format(i, y_vp_s[0]))
 
-                        lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).mean()
+                        # lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).mean() # orig
+                        lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).sum()
 
                         if self.verbose >= 1.1:
                             print('lq_y{}: {}'.format(i, lq_yi))
 
-                        fac = self.msum[i] 
+                        # fac = self.msum[i] # orig
+                        fac = self.N[i] / yi.size(0) # new1
+                        # fac = self.msum[i] / mi.sum() # new2. doesn't work.
                         out += lq_yi * fac
             else:
                 out += self.mp[key].log_q(reals[key])
@@ -307,9 +310,11 @@ class Model(VI):
                                          self.b0[i],
                                          self.b1[i],
                                          self.b2[i])
-                        lp_yi = pm_i[mi].log().mean()
+                        # lp_yi = pm_i[mi].log().mean()
+                        lp_yi = pm_i[mi].log().sum()
 
-                        fac = self.msum[i] 
+                        # fac = self.msum[i] 
+                        fac = self.N[i] / mi.size(0)
                         out += lp_yi * fac
             elif key == 'v':
                 if self.use_stick_break:
