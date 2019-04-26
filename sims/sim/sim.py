@@ -78,10 +78,14 @@ if __name__ == '__main__':
     # Save output
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
 
-    elbo = out['g_elbo']
+    elbo = out['elbo']
 
     out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
-    gmod = out['g_model']
+    mod = cytofpy.model.Model(y=out['y'], priors=priors,
+                              tau=out['tau'],
+                              use_stick_break=out['use_stick_break'],
+                              model_noisy=out['model_noisy'])
+
 
     plt.plot(elbo)
     plt.ylabel('ELBO / NSUM')
@@ -89,11 +93,12 @@ if __name__ == '__main__':
 
     # Posterior Inference
     B = 100
-    post = [gmod.sample_params() for b in range(B)]
+    idx = [np.random.choice(mod.N[i], 1) for i in range(mod.I)]
+    post = [mod.sample_params(idx) for b in range(B)]
 
     # Plot Z
-    H = torch.stack([p['H'] for p in post]).detach().reshape((B, gmod.J, gmod.K))
-    v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, gmod.K))
+    H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
+    v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
     Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
     plt.imshow(Z.mean(0) > .5, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
     add_gridlines_Z(Z[0])
@@ -116,14 +121,14 @@ if __name__ == '__main__':
 
     # Plot W, v
     plt.figure()
-    for i in range(gmod.I):
-        plt.subplot(gmod.I + 1, 1, i + 1)
+    for i in range(mod.I):
+        plt.subplot(mod.I + 1, 1, i + 1)
         plt.boxplot(W[:, i, :], showmeans=True, whis=[2.5, 97.5], showfliers=False)
         plt.ylabel('$W_{}$'.format(i+1), rotation=0, labelpad=15)
         for yint in data['params']['W'][i, :].tolist():
             plt.axhline(yint)
 
-    plt.subplot(gmod.I + 1, 1, gmod.I + 1)
+    plt.subplot(mod.I + 1, 1, mod.I + 1)
     plt.boxplot(v.cumprod(1), showmeans=True, whis=[2.5, 97.5], showfliers=False)
     plt.ylabel('$v$', rotation=0, labelpad=15)
     plt.tight_layout()
@@ -143,7 +148,7 @@ if __name__ == '__main__':
     # sig0_m_trace = torch.stack([t['sig0'].dist().mean for t in out['trace_g']])
     # plt.plot(sig0_m_trace.detach().numpy())
 
-    # for i in range(gmod.I):
+    # for i in range(mod.I):
     #     plt.axhline(data['params']['sig'][i])
 
     # plt.title('trace plot for $\sigma$_0 vp mean')
