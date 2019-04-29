@@ -21,7 +21,7 @@ import copy
 import numpy as np
 import pickle
 import seaborn as sns
-import dden
+import ddenExpressed
 import blue2red
 
 from cytofpy.model import post_proc
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # subsample = 0.1
 
     img_dir = path_to_exp_results + '/img/'
-    os.makedirs('{}/dden'.format(img_dir), exist_ok=True)
+    os.makedirs('{}/dden-expressed'.format(img_dir), exist_ok=True)
     path_to_cb_data = 'data/cb.txt'
 
     show_plots = False
@@ -330,59 +330,57 @@ if __name__ == '__main__':
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
 
-        plot_dden = False
+        plot_dden = True
         if plot_dden:
             # Posterior predictives estimate
-            y_grid, _ = dden.sample(mod, lam_est)
-            y_grid = y_grid.numpy()
+            y_grid, _ = ddenExpressed.sample(draw_theta())
 
             # TODO: Consider making this more memory efficient
             #       by just storing (dden_ij_mean, lower, upper)
             print('drawing dden')
-            dden_post = [dden.sample(mod, lam_draw)[1] for lam_draw in lam_draws]
-            print('drawing gam')
-            gam = [gam_post.sample(mod, lam_draw)[0] for lam_draw in lam_draws]
-            eta0 = torch.stack([p['eta0'] for p in post]).detach().numpy()
-            eta1 = torch.stack([p['eta1'] for p in post]).detach().numpy()
+            dden_draws = 30
+            dden_post = [ddenExpressed.sample(draw_theta()) for d in range(dden_draws)]
 
             size_min = 0
             size_max = 300
             size_range = size_max - size_min
             for i in range(mod.I):
-                gam_i = torch.stack([gam_draw[i].detach() for gam_draw in gam])
-                gam_i_onehot = util.get_one_hot(gam_i, sum(mod.L))
-                obs_i = (1 - mod.m[i])[None, :, :, None].double()
-                si = ((gam_i_onehot * obs_i).sum(1) / obs_i.sum(1)).mean(0)
-                for j in range(mod.J):
-                    dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
-                    dden_ij_mean = dden_ij.mean(0)
-                    dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
-                    dden_ij_upper = np.percentile(dden_ij, 97.5, axis=0)
-                    #
-                    sns.kdeplot(mod.y_data[i][:, j][1-mod.m[i][:, j]].numpy(), color='lightgrey')
-                    plt.plot(y_grid, dden_ij_mean, color='purple')
-                    plt.fill_between(y_grid, dden_ij_lower, dden_ij_upper, alpha=.5, color='purple')
-                    plt.title('i: {}, j: {}'.format(i+1, j+1))
-                    plt.axvline(0, linewidth=.3, linestyle=':', color='lightgrey')
-                    plt.text(.05, .9,
-                             'missing: {:.1f}%'.format(mod.m[i][:, j].double().mean() * 100),
-                             ha='left', va='center', transform=plt.gca().transAxes)
-                    #
-                    s0_ij = np.sqrt(si[j, :mod.L[0]]) * size_range + size_min
-                    s1_ij = np.sqrt(si[j, mod.L[0]:]) * size_range + size_min
-                    plt.scatter(mu0.mean(0), [0]*mod.L[0], s=s0_ij,
-                                alpha=.7, marker='P', linewidth=0, c='blue')
-                    plt.scatter(mu1.mean(0), [0]*mod.L[1], s=s1_ij,
-                                alpha=.7, marker='X', linewidth=0, c='red')
-                    #
-                    y_ij_mean = vae[i].mean[:, j].detach().numpy()
-                    y_ij_sd = vae[i].log_sd[:, j].exp().detach().numpy()
-                    plt.scatter(y_ij_mean - 1.96 * y_ij_sd, 0, c='orange', marker='>', alpha=.5, lw=0)
-                    # plt.plot(y_ij_mean, 0, color='orange', marker='.', alpha=.5)
-                    plt.scatter(y_ij_mean + 1.96 * y_ij_sd, 0, c='orange', marker='<', alpha=.5, lw=0)
-                    #
-                    plt.savefig('{}/dden/dden_i{}_j{}.pdf'.format(img_dir, i + 1, j + 1))
-                    plt.close()
+                pass
+                # TODO: plot dden-expressed
+                # gam_i = torch.stack([gam_draw[i].detach() for gam_draw in gam])
+                # gam_i_onehot = util.get_one_hot(gam_i, sum(mod.L))
+                # obs_i = (1 - mod.m[i])[None, :, :, None].double()
+                # si = ((gam_i_onehot * obs_i).sum(1) / obs_i.sum(1)).mean(0)
+                # for j in range(mod.J):
+                #     dden_ij = torch.stack([dd[i][j] for dd in dden_post]).numpy()
+                #     dden_ij_mean = dden_ij.mean(0)
+                #     dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
+                #     dden_ij_upper = np.percentile(dden_ij, 97.5, axis=0)
+                #     #
+                #     sns.kdeplot(mod.y_data[i][:, j][1-mod.m[i][:, j]].numpy(), color='lightgrey')
+                #     plt.plot(y_grid, dden_ij_mean, color='purple')
+                #     plt.fill_between(y_grid, dden_ij_lower, dden_ij_upper, alpha=.5, color='purple')
+                #     plt.title('i: {}, j: {}'.format(i+1, j+1))
+                #     plt.axvline(0, linewidth=.3, linestyle=':', color='lightgrey')
+                #     plt.text(.05, .9,
+                #              'missing: {:.1f}%'.format(mod.m[i][:, j].double().mean() * 100),
+                #              ha='left', va='center', transform=plt.gca().transAxes)
+                #     #
+                #     s0_ij = np.sqrt(si[j, :mod.L[0]]) * size_range + size_min
+                #     s1_ij = np.sqrt(si[j, mod.L[0]:]) * size_range + size_min
+                #     plt.scatter(mu0.mean(0), [0]*mod.L[0], s=s0_ij,
+                #                 alpha=.7, marker='P', linewidth=0, c='blue')
+                #     plt.scatter(mu1.mean(0), [0]*mod.L[1], s=s1_ij,
+                #                 alpha=.7, marker='X', linewidth=0, c='red')
+                #     #
+                #     y_ij_mean = vae[i].mean[:, j].detach().numpy()
+                #     y_ij_sd = vae[i].log_sd[:, j].exp().detach().numpy()
+                #     plt.scatter(y_ij_mean - 1.96 * y_ij_sd, 0, c='orange', marker='>', alpha=.5, lw=0)
+                #     # plt.plot(y_ij_mean, 0, color='orange', marker='.', alpha=.5)
+                #     plt.scatter(y_ij_mean + 1.96 * y_ij_sd, 0, c='orange', marker='<', alpha=.5, lw=0)
+                #     #
+                #     plt.savefig('{}/dden/dden_i{}_j{}.pdf'.format(img_dir, i + 1, j + 1))
+                #     plt.close()
 
     print("Done.")
 
