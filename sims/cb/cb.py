@@ -330,7 +330,7 @@ if __name__ == '__main__':
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
             plt.close()
 
-        plot_dden = True
+        plot_dden = False
         if plot_dden:
             # Posterior predictives estimate
             y_grid, _ = ddenExpressed.sample(draw_theta())
