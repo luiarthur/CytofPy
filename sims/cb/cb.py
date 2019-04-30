@@ -353,12 +353,14 @@ if __name__ == '__main__':
                 # TODO: plot dden-expressed
                 for j in range(mod.J):
                     dden_ij = torch.stack([dd[i][:, j] for dd in dden_post]).numpy()
+                    dden_ij *= (1 - mod.m[i][:, j].numpy()).mean()
                     dden_ij_mean = dden_ij.mean(0)
                     dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
                     dden_ij_upper = np.percentile(dden_ij, 97.5, axis=0)
                     #
                     yij_obs = mod.y_data[i][:, j][1-mod.m[i][:, j]].numpy()
-                    sns.kdeplot(yij_obs[yij_obs > 0], color='lightgrey')
+                    # sns.kdeplot(yij_obs[yij_obs > 0], color='lightgrey')
+                    sns.kdeplot(yij_obs, color='lightgrey')
                     plt.plot(y_grid.numpy(), dden_ij_mean, color='purple')
                     plt.fill_between(y_grid.numpy(), dden_ij_lower, dden_ij_upper,
                                      alpha=.5, color='purple')
