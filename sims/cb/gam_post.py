@@ -17,9 +17,9 @@ def sample(mod, lam_draw):
     H = params['H'].detach()
     v = params['v'].detach()
     if mod.use_stick_break:
-        Z = (v.cumprod(0) > Normal(0, 1).cdf(H)).double()
+        Z = (v.cumprod(0) > H).double()
     else:
-        Z = (v > Normal(0, 1).cdf(H)).double()
+        Z = (v > H).double()
 
     gam = []
     for i in range(mod.I):

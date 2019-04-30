@@ -4,7 +4,7 @@ import math
 import torch
 
 from torch.distributions.log_normal import LogNormal
-from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli
+from torch.distributions import Normal, Gamma, Dirichlet, Beta, Bernoulli, Uniform
 from torch.nn import ParameterList
 
 from cytofpy.model.model_param import ModelParam, VI
@@ -97,7 +97,8 @@ def default_priors(y, K:int=30, L=None,
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
             #
             'alpha': Gamma(.1, .1),
-            'H': Normal(0, 1),
+            # 'H': Normal(0, 1),
+            'H': Uniform(0, 1),
             #
             'b0': b0,
             'b1': b1,
@@ -180,7 +181,8 @@ class Model(VI):
         self.mp['W'] = ModelParam((self.I, self.K - 1), 'simplex')
         self.mp['alpha'] = ModelParam(1, 'positive')
         self.mp['v'] = ModelParam(self.K, 'unit_interval')
-        self.mp['H'] = ModelParam((self.J, self.K), 'real')
+        # self.mp['H'] = ModelParam((self.J, self.K), 'real')
+        self.mp['H'] = ModelParam((self.J, self.K), 'unit_interval')
         ### END OF Assign Model Parameters###
 
         # This must be done after assigning model parameters
@@ -229,7 +231,8 @@ class Model(VI):
 
             # Z: J x K
             # H: J x K
-            Z = compute_Z(v[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
+            # Z = compute_Z(v[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
+            Z = compute_Z(v[None, :] - params['H'], self.tau)
 
             # Z_mix: Ni x J x K
             Z_mix = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]

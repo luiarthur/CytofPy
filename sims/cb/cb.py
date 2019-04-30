@@ -164,7 +164,7 @@ if __name__ == '__main__':
     pickle.dump(out, open('{}/out.p'.format(path_to_exp_results), 'wb'))
     show_plots = True
     if show_plots:
-        print("Making Plots...")
+        print("Making Plots...", flush=True)
 
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
@@ -201,9 +201,11 @@ if __name__ == '__main__':
         H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
         v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
         if use_stick_break:
-            Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+            # Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+            Z = (v.cumprod(2) > H).numpy()
         else:
-            Z = (v > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+            # Z = (v > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+            Z = (v > H).numpy()
         plt.imshow(Z.mean(0), aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
         add_gridlines_Z(Z[0])
         plt.yticks(np.arange(mod.J), np.arange(mod.J) + 1, fontsize=10)
@@ -304,6 +306,7 @@ if __name__ == '__main__':
             return post_proc.sample_params.theta(mod, priors)[0]
 
         # lam_samps = 100
+        print("plot yz", flush=True)
         lam_samps = 30
         lam_draws = [post_proc.lam_post.sample(draw_theta(), mod) for b in range(lam_samps)]
         lam = [torch.stack([lam_b[i] for lam_b in lam_draws]) for i in range(mod.I)]
@@ -322,7 +325,7 @@ if __name__ == '__main__':
             plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05, cm_y=cm, vlim_y=VLIM)
             # plt.tight_layout()
             # plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1), bbox_inches='tight')
-            plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1))
+            plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1), dpi=500)
             plt.close()
 
         # Plot imputed ys
@@ -341,7 +344,7 @@ if __name__ == '__main__':
 
             # TODO: Consider making this more memory efficient
             #       by just storing (dden_ij_mean, lower, upper)
-            print('drawing dden')
+            print('drawing dden', flush=True)
             dden_draws = 30
             dden_post = [ddenExpressed.sample(draw_theta(), y_grid) for d in range(dden_draws)]
 
@@ -353,7 +356,8 @@ if __name__ == '__main__':
                 # TODO: plot dden-expressed
                 for j in range(mod.J):
                     dden_ij = torch.stack([dd[i][:, j] for dd in dden_post]).numpy()
-                    dden_ij *= (1 - mod.m[i][:, j].numpy()).mean()
+                    # dden_ij *= (1 - mod.m[i][:, j].numpy()).mean()
+                    dden_ij *= (mod.m[i][:, j].numpy() > 0).mean()
                     dden_ij_mean = dden_ij.mean(0)
                     dden_ij_lower = np.percentile(dden_ij, 2.5, axis=0)
                     dden_ij_upper = np.percentile(dden_ij, 97.5, axis=0)
@@ -377,5 +381,5 @@ if __name__ == '__main__':
                     plt.savefig('{}/dden-expressed/dden_i{}_j{}.pdf'.format(img_dir, i + 1, j + 1))
                     plt.close()
 
-    print("Done.")
+    print("Done.", flush=True)
 

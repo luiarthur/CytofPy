@@ -99,7 +99,7 @@ if __name__ == '__main__':
     # Plot Z
     H = torch.stack([p['H'] for p in post]).detach().reshape((B, mod.J, mod.K))
     v = torch.stack([p['v'] for p in post]).detach().reshape((B, 1, mod.K))
-    Z = (v.cumprod(2) > torch.distributions.Normal(0, 1).cdf(H)).numpy()
+    Z = (v.cumprod(2) > H).numpy()
     plt.imshow(Z.mean(0) > .5, aspect='auto', vmin=0, vmax=1, cmap=cm_greys)
     add_gridlines_Z(Z[0])
     plt.savefig('{}/Z.pdf'.format(path_to_exp_results))
