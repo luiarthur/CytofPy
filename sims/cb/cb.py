@@ -115,10 +115,10 @@ if __name__ == '__main__':
     priors = cytofpy.model.default_priors(y, K=K, L=L, y_quantiles=y_quantiles, p_bounds=p_bounds)
 
     priors['sig2'] = Gamma(.1, 1)
-    # priors['alpha'] = Gamma(.1, .1)
-    priors['alpha'] = Gamma(2, .1)
-    priors['delta0'] = Gamma(1, 1)
-    priors['delta1'] = Gamma(1, 1)
+    priors['alpha'] = Gamma(.1, .1)
+    # priors['alpha'] = Gamma(2, .1)
+    priors['delta0'] = Gamma(1, .1)
+    priors['delta1'] = Gamma(1, .1)
     priors['noisy_var'] = 10.0
     priors['eps'] = Beta(1, 99)
 
