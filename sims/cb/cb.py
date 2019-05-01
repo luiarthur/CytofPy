@@ -117,8 +117,8 @@ if __name__ == '__main__':
     priors['sig2'] = Gamma(.1, 1)
     priors['alpha'] = Gamma(.1, .1)
     # priors['alpha'] = Gamma(2, .1)
-    priors['delta0'] = Gamma(1, .1)
-    priors['delta1'] = Gamma(1, .1)
+    priors['delta0'] = Gamma(1, 1)
+    priors['delta1'] = Gamma(1, 1)
     priors['noisy_var'] = 10.0
     priors['eps'] = Beta(1, 99)
 
