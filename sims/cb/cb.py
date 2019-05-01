@@ -322,6 +322,7 @@ if __name__ == '__main__':
             # quiet_yi = y[i][1 - idx_noisy[i], :]
             # quiet_lami = lam_est[i][1 - idx_noisy[i]]
             # plot_yz(quiet_yi, Z_mean, W_mean[i, :], quiet_lami, w_thresh=.05, cm_y=cm, vlim_y=VLIM)
+            plt.figure(figsize=(8,8))
             plot_yz(y[i], Z_mean, W_mean[i, :], lam_est[i], w_thresh=.05, cm_y=cm, vlim_y=VLIM)
             # plt.tight_layout()
             # plt.savefig('{}/y{}_post.pdf'.format(img_dir, i + 1), bbox_inches='tight')
