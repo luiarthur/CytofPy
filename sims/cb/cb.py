@@ -168,7 +168,7 @@ if __name__ == '__main__':
 
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
-        elbo = out['elbo']
+        elbo = np.array(out['elbo'])
         use_stick_break = out['use_stick_break']
         mod = cytofpy.model.Model(y=y, priors=priors,
                                   tau=out['tau'],
@@ -186,7 +186,7 @@ if __name__ == '__main__':
         plt.close()
 
         tail = 1000
-        plt.plot(elbo[-tail:])
+        plt.plot(elbo[-tail:] / mod.Nsum)
         plt.ylabel('ELBO / NSUM')
         plt.xlabel('iteration')
         plt.savefig('{}/elbo_tail.pdf'.format(img_dir))
