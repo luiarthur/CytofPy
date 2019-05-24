@@ -290,7 +290,8 @@ class Model(VI):
                             print('lq_y{}: {}'.format(i, lq_yi))
 
                         # fac = self.msum[i] # orig
-                        fac = self.N[i] / yi.size(0) # new1. use this because it relates to 
+                        fac = self.N[i] / mi.size(0)
+                        # fac = self.N[i] / yi.size(0) # new1. use this because it relates to 
                                                      #       p(y|theta) and p(m | y, theta)
                         # fac = 1.0 # new1.5
                         # fac = self.msum[i] / mi.sum() # new2. doesn't work.
