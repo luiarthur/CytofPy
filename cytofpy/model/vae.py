@@ -14,30 +14,27 @@ class VAE(torch.nn.Module):
         # self.mean = torch.nn.Parameter(torch.ones((1,  )) * mean_init)
         # self.log_sd = torch.nn.Parameter((torch.ones((1,  )) * sd_init).log())
 
-        # Cached mean and sd. Be cautious when using these!
-        self.mean_fn_cached = None
-        self.sd_fn_cached = None
-
-    def dist(self, y_mini, m_mini):
+    def forward(self, y_mini, m_mini, N_full):
         # Set missing y to 0 (to ensure not nan)
         y_mini = y_mini + 0
         y_mini[m_mini] = 0
 
         # Set missing indicators to double
-        m_mini = m_mini.double()
+        mi_double = m_mini.double()
 
         # Mean function
-        mean_fn = y_mini * (1 - m_mini) + self.mean * m_mini
+        mean_fn = y_mini * (1 - mi_double) + self.mean * mi_double
 
         # SD function
-        sd_fn = self.log_sd.exp() * m_mini
+        sd_fn = self.log_sd.exp() * mi_double
 
-        # Cache mean and sd fn. Be cautious when using these!
-        self.mean_fn_cached = mean_fn + 0
-        self.sd_fn_cached = sd_fn + 0
+        # imputed y
+        y_imputed = Normal(mean_fn, sd_fn).rsample()
 
-        return Normal(mean_fn, sd_fn)
+        # log_qy
+        log_qy = Normal(mean_fn[m_mini], sd_fn[m_mini]).log_prob(y_imputed[m_mini]).sum()
 
-    def forward(self, y_mini, m_mini):
-        y_imputed = self.dist(y_mini, m_mini).rsample()
-        return y_imputed
+        # batch size
+        batchsize = y_mini.size(0)
+
+        return y_imputed, log_qy * (N_full / batchsize)
