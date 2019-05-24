@@ -15,7 +15,11 @@ import numpy as np
 # Set default type to float64 (instead of float32)
 torch.set_default_dtype(torch.float64)
 
-def compute_Z(logit, tau):
+@torch.jit.script
+def logit(p):
+    return torch.log(p) - torch.log1p(-p)
+
+def compute_Z(v, H, tau):
     """
     This enables the backward gradient computations via Z.
     Notice at the end, we basically return Z (binary tensor).
@@ -24,17 +28,14 @@ def compute_Z(logit, tau):
     computed, and then add back smoothed_Z for the return.
     The only gradient will then be that of smoothed Z.
     """
-    smoothed_Z = (logit / tau).sigmoid()
-    Z = (smoothed_Z > 0.5).double()
+    x = logit(v[None, :]) - logit(H)
+    smoothed_Z = (x / tau).sigmoid()
+    Z = (v > H).double()
     return (Z - smoothed_Z).detach() + smoothed_Z
 
 @torch.jit.script
-def prob_miss_logit(y, b0, b1, b2):
-    return b0 + b1 * y + b2 * y**2
-
-@torch.jit.script
 def prob_miss(y, b0, b1, b2):
-    return prob_miss_logit(y, b0, b1, b2).sigmoid()
+    return (b0 + b1 * y + b2 * y**2).sigmoid()
 
 def solve_beta(y, p):
     k = len(p)
@@ -97,7 +98,6 @@ def default_priors(y, K:int=30, L=None,
             'eta1': Dirichlet(torch.ones(L[1]) / L[1]),
             #
             'alpha': Gamma(.1, .1),
-            # 'H': Normal(0, 1),
             'H': Uniform(0, 1),
             #
             'b0': b0,
@@ -158,6 +158,9 @@ class Model(VI):
         # register y
         self.y_data = y
 
+        # register log_qy
+        self.log_qy = None
+
         self.msum = [mi.sum() for mi in self.m]
 
         ### Assign Model Parameters###
@@ -181,7 +184,6 @@ class Model(VI):
         self.mp['W'] = ModelParam((self.I, self.K - 1), 'simplex')
         self.mp['alpha'] = ModelParam(1, 'positive')
         self.mp['v'] = ModelParam(self.K, 'unit_interval')
-        # self.mp['H'] = ModelParam((self.J, self.K), 'real')
         self.mp['H'] = ModelParam((self.J, self.K), 'unit_interval')
         ### END OF Assign Model Parameters###
 
@@ -206,6 +208,8 @@ class Model(VI):
 
         ll = 0.0
         for i in range(self.I):
+            mi = self.m[i][idx[i], :]
+
             # Y: Ni x J
             # muz: Lz
             # etaz_i: 1 x J x Lz
@@ -223,7 +227,7 @@ class Model(VI):
             logmix_L0 = torch.logsumexp(d0, 2)
             logmix_L1 = torch.logsumexp(d1, 2)
 
-            # v: K
+            # p: K
             if self.use_stick_break:
                 v = params['v'].cumprod(0)
             else:
@@ -231,8 +235,7 @@ class Model(VI):
 
             # Z: J x K
             # H: J x K
-            # Z = compute_Z(v[None, :] - Normal(0, 1).cdf(params['H']), self.tau)
-            Z = compute_Z(v[None, :] - params['H'], self.tau)
+            Z = compute_Z(v, params['H'], self.tau)
 
             # Z_mix: Ni x J x K
             Z_mix = Z[None, :] * logmix_L1[:, :, None] + (1 - Z[None, :]) * logmix_L0[:, :, None]
@@ -247,98 +250,53 @@ class Model(VI):
             lli = torch.logsumexp(f, 1)
 
             fac = self.N[i] / y[i].size(0)
+
             if self.model_noisy:
                 eps_i = params['eps'][i]
                 # eps_i = torch.tensor(1e-6)
                 lli_quiet = lli + torch.log1p(-eps_i)
                 lli_noisy = Normal(0, self.noisy_sd).log_prob(y[i]).sum(1) + eps_i.log()
-                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(0).sum(0) * fac
+                lli = torch.stack([lli_quiet, lli_noisy]).logsumexp(0).sum(0)
             else:
-                # lli = torch.logsumexp(f, 1).mean(0) * fac
-                lli = lli.sum(0) * fac
+                lli = lli.sum(0)
 
-            ll += lli
-
-        ll /= self.Nsum
-
-        if self.verbose >= 1:
-            print('log_like: {}'.format(ll))
+            # p(m | y, theta)
+            if mi.sum() > 0:
+                pm_i = prob_miss(y[i],
+                                 self.b0[i],
+                                 self.b1[i],
+                                 self.b2[i])
+                lli += pm_i[mi].log().sum()
+            
+            ll += lli * fac
 
         return ll
 
     def log_q(self, reals, idx):
-        out = 0.0
+        lq = 0.0
         for key in reals:
             if key == 'y':
-                for i in range(self.I):
-                    mi = self.m[i][idx[i], :]
-                    if mi.sum() > 0:
-
-                        y_vp_m = self.y_vae[i].mean_fn_cached[mi]
-                        y_vp_s = self.y_vae[i].sd_fn_cached[mi]
-                        yi = reals['y'][i][mi]
-
-                        if self.verbose >= 1.2:
-                            print('y{}: {}'.format(i, yi[0]))
-                            print('y{}_vp_m: {}'.format(i, y_vp_m[0]))
-                            print('y{}_vp_s: {}'.format(i, y_vp_s[0]))
-
-                        # lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).mean() # orig
-                        lq_yi = Normal(y_vp_m, y_vp_s).log_prob(yi).sum()
-
-                        if self.verbose >= 1.1:
-                            print('lq_y{}: {}'.format(i, lq_yi))
-
-                        # fac = self.msum[i] # orig
-                        fac = self.N[i] / mi.size(0)
-                        # fac = self.N[i] / yi.size(0) # new1. use this because it relates to 
-                                                     #       p(y|theta) and p(m | y, theta)
-                        # fac = 1.0 # new1.5
-                        # fac = self.msum[i] / mi.sum() # new2. doesn't work.
-                        out += lq_yi * fac
+                lq += self.log_qy
             else:
-                out += self.mp[key].log_q(reals[key])
-
-        out /= self.Nsum
-        if self.verbose >= 1:
-            print('log_q: {}'.format(out))
-
-        return out
+                lq += self.mp[key].log_q(reals[key])
+        return lq 
 
     def log_prior(self, reals, params, idx):
-        out = 0.0
+        lp = 0.0
         for key in reals:
-            if key == 'y':
-                for i in range(self.I):
-                    mi = self.m[i][idx[i], :]
-                    if mi.sum() > 0:
-                        pm_i = prob_miss(reals['y'][i],
-                                         self.b0[i],
-                                         self.b1[i],
-                                         self.b2[i])
-                        # lp_yi = pm_i[mi].log().mean()
-                        lp_yi = pm_i[mi].log().sum()
-
-                        # fac = self.msum[i] 
-                        fac = self.N[i] / mi.size(0)
-                        out += lp_yi * fac
-            elif key == 'v':
+            if key == 'v':
                 if self.use_stick_break:
                     tmp = Beta(params['alpha'], 1).log_prob(params['v'])
                 else:
                     tmp = Beta(params['alpha'] / self.K, 1).log_prob(params['v'])
                 tmp += self.mp['v'].logabsdetJ(reals['v'], params['v'])
-                out += tmp.sum()
-            else:
+                lp += tmp.sum()
+            elif key != 'y':
                 tmp = self.priors[key].log_prob(params[key])
                 tmp += self.mp[key].logabsdetJ(reals[key], params[key])
-                out += tmp.sum()
+                lp += tmp.sum()
 
-        out /= self.Nsum
-        if self.verbose >= 1:
-            print('log_prior: {}'.format(out))
-
-        return out
+        return lp
 
     def sample_reals(self, idx):
         reals = {}
@@ -347,21 +305,14 @@ class Model(VI):
                 reals[key] = self.mp[key].real_sample()
 
         reals['y'] = []
+        log_qy = 0.0
         for i in range(self.I):
-            # For debugging
-            if self.verbose >= 1.1:
-                if i == 0:
-                    up_to = 2
-                    y_tmp = self.y_data[i][:up_to, :]
-                    m_tmp = self.m[i][:up_to, :]
-                    y_track = self.y_vae[i](y_tmp, m_tmp)
-                    print('y_m_track: {}'.format(self.y_vae[i].mean_fn_cached[m_tmp]))
-                    print('y_s_track: {}'.format(self.y_vae[i].sd_fn_cached[m_tmp]))
-
             yi_dat = self.y_data[i][idx[i], :]
             mi = self.m[i][idx[i], :]
-            yi = self.y_vae[i](yi_dat, mi)
+            yi, log_qyi = self.y_vae[i](yi_dat, mi, self.N[i])
             reals['y'].append(yi)
+            log_qy += log_qyi
+        self.log_qy = log_qy
 
         return reals
 

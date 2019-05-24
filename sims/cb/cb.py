@@ -153,8 +153,8 @@ if __name__ == '__main__':
 
     # TODO: max_iter = 10000, minibatch_size=2000
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=10000, lr=1e-2, print_freq=10, eps_conv=0,
-                                priors=priors, minibatch_size=2000, tau=0.001,
+        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-2, print_freq=10, eps_conv=0,
+                                priors=priors, minibatch_size=100, tau=0.001,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
     # Flush output
@@ -168,7 +168,7 @@ if __name__ == '__main__':
 
         # out = pickle.load(open('{}/out.p'.format(path_to_exp_results), 'rb'))
 
-        elbo = out['elbo']
+        elbo = np.array(out['elbo'])
         use_stick_break = out['use_stick_break']
         mod = cytofpy.model.Model(y=y, priors=priors,
                                   tau=out['tau'],
@@ -179,14 +179,14 @@ if __name__ == '__main__':
         mod.y_vae =vae
         model_noisy = out['model_noisy']
 
-        plt.plot(elbo)
+        plt.plot(elbo / mod.Nsum)
         plt.ylabel('ELBO / NSUM')
         plt.xlabel('iteration')
         plt.savefig('{}/elbo.pdf'.format(img_dir))
         plt.close()
 
         tail = 1000
-        plt.plot(elbo[-tail:])
+        plt.plot(elbo[-tail:] / mod.Nsum)
         plt.ylabel('ELBO / NSUM')
         plt.xlabel('iteration')
         plt.savefig('{}/elbo_tail.pdf'.format(img_dir))
@@ -331,8 +331,7 @@ if __name__ == '__main__':
 
         # Plot imputed ys
         for i in range(mod.I):
-            yi = vae[i](mod.y_data[i], mod.m[i]).detach()
-            # plt.hist(vae[i].mean_fn_cached[mod.m[i]].detach().numpy())
+            yi, _ = vae[i](mod.y_data[i], mod.m[i], mod.N[i])
             plt.hist(yi[mod.m[i]].detach().numpy())
             plt.xlim(-10, 5)
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
