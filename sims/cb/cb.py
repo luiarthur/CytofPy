@@ -179,7 +179,7 @@ if __name__ == '__main__':
         mod.y_vae =vae
         model_noisy = out['model_noisy']
 
-        plt.plot(elbo)
+        plt.plot(elbo / mod.Nsum)
         plt.ylabel('ELBO / NSUM')
         plt.xlabel('iteration')
         plt.savefig('{}/elbo.pdf'.format(img_dir))
@@ -331,8 +331,7 @@ if __name__ == '__main__':
 
         # Plot imputed ys
         for i in range(mod.I):
-            yi, _ = vae[i](mod.y_data[i], mod.m[i], mod.N[i]).detach()
-            # plt.hist(vae[i].mean_fn_cached[mod.m[i]].detach().numpy())
+            yi, _ = vae[i](mod.y_data[i], mod.m[i], mod.N[i])
             plt.hist(yi[mod.m[i]].detach().numpy())
             plt.xlim(-10, 5)
             plt.savefig('{}/y{}_imputed_hist.pdf'.format(img_dir, i + 1))
