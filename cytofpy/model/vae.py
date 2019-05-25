@@ -26,7 +26,8 @@ class VAE(torch.nn.Module):
         mean_fn = y_mini * (1 - mi_double) + self.mean * mi_double
 
         # SD function
-        sd_fn = self.log_sd.exp() * mi_double
+        # sd_fn = self.log_sd.exp() * mi_double
+        sd_fn = (self.log_sd.sigmoid()*.3) * mi_double
 
         # imputed y
         y_imputed = Normal(mean_fn, sd_fn).rsample()

@@ -153,8 +153,8 @@ if __name__ == '__main__':
 
     # TODO: max_iter = 10000, minibatch_size=2000
     with Timer.Timer('Model training'):
-        out = cytofpy.model.fit(y, max_iter=5000, lr=1e-2, print_freq=10, eps_conv=0,
-                                priors=priors, minibatch_size=100, tau=0.001,
+        out = cytofpy.model.fit(y, max_iter=10000, lr=1e-2, print_freq=10, eps_conv=0,
+                                priors=priors, minibatch_size=500, tau=0.001,
                                 trace_every=50, backup_every=50,
                                 verbose=0, seed=SEED, use_stick_break=False)
     # Flush output
