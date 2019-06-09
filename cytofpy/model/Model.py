@@ -183,7 +183,11 @@ class Model(VI):
         self.mp['eta1'] = ModelParam((self.I, self.J, self.L[1] - 1), 'simplex')
         self.mp['W'] = ModelParam((self.I, self.K - 1), 'simplex')
         self.mp['alpha'] = ModelParam(1, 'positive')
-        self.mp['v'] = ModelParam(self.K, 'unit_interval')
+        if self.use_stick_break:
+            self.mp['v'] = ModelParam(self.K, 'unit_interval',
+                                      torch.ones(self.K) * .99)
+        else:
+            self.mp['v'] = ModelParam(self.K, 'unit_interval')
         self.mp['H'] = ModelParam((self.J, self.K), 'unit_interval')
         ### END OF Assign Model Parameters###
 
