@@ -113,7 +113,7 @@ def default_priors(y, K:int=30, L=None,
 
 class Model(VI):
     def __init__(self, y, priors, m=None, y_mean_init=-3.0, y_sd_init=0.1,
-                 tau=0.1, verbose=1, use_stick_break=True, model_noisy=True):
+                 tau=0.1, verbose=1, use_stick_break=True, model_noisy=True, scale=1):
 
         self.model_noisy = model_noisy
         self.verbose = verbose
@@ -131,6 +131,7 @@ class Model(VI):
         self.J = priors['J']
         self.N = priors['N']
         self.Nsum = sum(self.N)
+        self.scale = scale
 
         # Tuning Parameters
         self.tau = tau
@@ -313,7 +314,7 @@ class Model(VI):
         for i in range(self.I):
             yi_dat = self.y_data[i][idx[i], :]
             mi = self.m[i][idx[i], :]
-            yi, log_qyi = self.y_vae[i](yi_dat, mi, self.N[i])
+            yi, log_qyi = self.y_vae[i](yi_dat, mi, self.N[i], scale=self.scale)
             reals['y'].append(yi)
             log_qy += log_qyi
         self.log_qy = log_qy

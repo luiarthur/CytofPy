@@ -14,7 +14,7 @@ class VAE(torch.nn.Module):
         # self.mean = torch.nn.Parameter(torch.ones((1,  )) * mean_init)
         # self.log_sd = torch.nn.Parameter((torch.ones((1,  )) * sd_init).log())
 
-    def forward(self, y_mini, m_mini, N_full):
+    def forward(self, y_mini, m_mini, N_full, scale=1):
         # Set missing y to 0 (to ensure not nan)
         y_mini = y_mini + 0
         y_mini[m_mini] = 0
@@ -38,4 +38,4 @@ class VAE(torch.nn.Module):
         # batch size
         batchsize = y_mini.size(0)
 
-        return y_imputed, log_qy * (N_full / batchsize)
+        return y_imputed, log_qy * (N_full / batchsize) * scale
