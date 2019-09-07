@@ -3,13 +3,16 @@ import sys
 import cytofpy
 import Timer
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import scale
+import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-import matplotlib 
-matplotlib.use('Agg')
+import matplotlib as mpl
+mpl.use('Agg')
 
-import numpy as np
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         path_to_exp_results = sys.argv[1]
@@ -47,13 +50,19 @@ if __name__ == '__main__':
 
     idx_nan = np.isnan(Y)
     Y[idx_nan] = np.random.randn(*Y.shape)[idx_nan] - 3
+    Y_scaled = scale(Y)
 
-    n_subsample = 2000
-    idx_subsample = np.random.choice(Y.shape[0], n_subsample, replace=False)
+    # pca = PCA(n_components=2)
+    # pca.fit(Y.T)
+    # plt.scatter(pca.components_[2, :], pca.components_[1, :])
+    # plt.show()
+
+    n_subsample = 10000
+    idx_subsample = np.random.choice(Y_scaled.shape[0], n_subsample, replace=False)
     # idx_subsample = np.random.choice(y[0].shape[0], n_subsample, replace=False)
 
-    tsne = TSNE()
-    tsne.fit(Y[idx_subsample])
+    tsne = TSNE(verbose=1)
+    tsne.fit(Y_scaled[idx_subsample])
 
     plt.scatter(tsne.embedding_[:, 0], tsne.embedding_[:, 1], s=10)
     plt.show()
