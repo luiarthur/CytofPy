@@ -21,7 +21,10 @@ TEST_DIR = $(RESULTS_DIR)/test/
 #}}}1
 
 getData:
-	aws s3 cp s3://cytof-cb-data/cb.txt data/cb.txt
+	aws s3 sync s3://cytof-cb-data data/ --exclude "*" --include "*.txt" --include "*.csv"
+
+sendData:
+	aws s3 sync data/ s3://cytof-cb-data --exclude "*" --include "*.txt" --include "*.csv"
 
 run:
 	bash run.sh $(RESULTS_DIR)/ $(AWS_BUCKET)
