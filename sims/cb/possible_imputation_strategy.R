@@ -7,19 +7,32 @@ M = is.na(Y)
 y1 = Y[1:41474, ]
 m1 = is.na(y1)
 
-
+# Impute missing values in a column
 impute = function(Yi, Mi, k) {
-  # idx_obs = which(Mi[, k] == 0 & Yi[, k] < 0)
+  # get indices for observed Y in column k
   idx_obs = which(Mi[, k] == 0)
+
+  # get indices for missing Y in column k
   idx_miss = which(Mi[, k] == 1)
+
+  # Fit model to predict observed Y in column k
+  # given Y in other columns (univariate multiple linear regression)
   model = lm(Yi[idx_obs, k] ~ Yi[idx_obs, -k])
+
+  # Get coefficients from trained model
   beta = model$coef[-1]
+
+  # Get intercept  from trained model
   intercept = model$coef[1]
+
+  # Make predictions for missing Y in column k
   pred = Yi[idx_miss, -k] %*% beta + intercept
+
   return(pred)
 }
 
 
+# Impute all missing values in a matrix
 impute_all = function(Yi, Mi, max_iter=30, tol=1e-3) {
   X = y1
   X[m1] = rnorm(sum(m1), -3, sd=.1)
