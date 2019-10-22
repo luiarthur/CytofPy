@@ -1,3 +1,28 @@
+/* NOTE:
+    - A `generated quantities` block can be used to compute deviance / LPML.
+      They are computed only after a sample has been generated. 
+      They are printed as output.
+      See: 
+        https://mc-stan.org/docs/2_18/reference-manual/program-block-generated-quantities.html
+    - See this for transformed parameters: 
+        https://mc-stan.org/docs/2_18/stan-users-guide/change-point-section.html
+    - See this for missing values:
+        https://mc-stan.org/docs/2_20/stan-users-guide/missing-multivariate-data.html
+ */
+
+functions {
+  /* See this:
+     https://mc-stan.org/docs/2_20/stan-users-guide/basic-functions-section.html
+   */
+  int num_y_obs(real m[,]) {
+    return sum(m);
+  }
+
+  int num_y_mis(real m[,]) {
+    return num_elements(m) - num_y_obs(m);
+  }
+}
+
 data {
   int J;
   int I;
@@ -7,6 +32,16 @@ data {
   int<lower=1> group[N]; 
   real y[N, J];
   int<lower=0, upper=1> m[N, J];
+}
+
+transformed data {
+  real y_obs[num_y_obs(m)]; 
+  // TODO: define y_obs
+
+  /* ALSO need an index transformer.
+     1. [n, j] -> idx in y_obs
+     2. [n, j] -> idx in y_mis
+   */
 }
 
 parameters {
@@ -21,11 +56,11 @@ parameters {
 }
 
 transformed parameters {
-  vector<upper=0>[L] mu0;
-  vector<lower=0>[L] mu1;
+  vector<upper=0>[L] mu0 = -cumulative_sum(mu0)[1:L];
+  vector<lower=0>[L] mu1 = cumulative_sum(mu1)[1:L];
 
-  mu0 = -cumulative_sum(mu0)[1:L];
-  mu1 = cumulative_sum(mu1)[1:L];
+  real y_mis[num_y_mis(m)]; 
+  // TODO: define y_mis
 }
 
 model {
@@ -44,4 +79,17 @@ model {
     }
   }
 
+  // Model
+  for (n in 1:N) {
+    for (j in 1:J) {
+      // TODO
+      if (M[n, j]) {
+        /* Missing data. Use observed likelihood as prior and 
+           Bernoulli missing mechanism for likelihood.
+         */
+      } else {
+        /* Observed data. Use observed likelihood only. */
+      }
+    }
+  }
 }
