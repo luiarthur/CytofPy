@@ -29,7 +29,10 @@ def impute(Y, M, k):
     Y[idx_mis, k] = pred.squeeze()
 
 
-def impute_all(Y, M, max_iter=30, tol=1e-3):
+def impute_all(Y, M, max_iter=30, tol=1e-3, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+
     # Make a copy
     X = Y + 0
 
