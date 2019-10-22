@@ -34,5 +34,4 @@ model_data = dict(
 )
 
 # Fit STAN model
-fit = sm.sampling(data=model_data, iter=200, chains=1, seed=1)
-                  # control=dict(max_treedepth=5), algorithm='HMC')
+fit = sm.sampling(data=model_data, iter=200, chains=1, seed=1, warmup=30)
