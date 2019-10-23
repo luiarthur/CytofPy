@@ -35,10 +35,10 @@ model {
   vector[N] ll;
 
   // Priors
-  sigma ~ gamma(3, 2);
+  sigma ~ gamma(.1, 1); // shape, rate
   alpha ~ gamma(1, 1);
-  delta0 ~ gamma(3, 2);
-  delta1 ~ gamma(3, 2);
+  delta0 ~ gamma(1, 1);
+  delta1 ~ gamma(1, 1);
   v ~ beta(alpha / K, 1);
 
   for (i in 1:I) {
