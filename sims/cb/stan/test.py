@@ -39,20 +39,22 @@ fit_vb = sm.vb(data=model_data, iter=1000, seed=1)
 vb_results = pystan_vb_extract(fit_vb)
 
 # Plots
-plt.boxplot(vb_results['W'][:, 0, :], showfliers=False, showmeans=True)
-plt.show()
+make_plots = False
+if make_plots:
+    plt.boxplot(vb_results['W'][:, 0, :], showfliers=False, showmeans=True)
+    plt.show()
 
-plt.boxplot(vb_results['sigma'], showfliers=False, showmeans=True)
-plt.show()
+    plt.boxplot(vb_results['sigma'], showfliers=False, showmeans=True)
+    plt.show()
 
-plt.boxplot(vb_results['mu0'], showfliers=False, showmeans=True)
-plt.show()
+    plt.boxplot(vb_results['mu0'], showfliers=False, showmeans=True)
+    plt.show()
 
-plt.boxplot(vb_results['mu1'], showfliers=False, showmeans=True)
-plt.show()
+    plt.boxplot(vb_results['mu1'], showfliers=False, showmeans=True)
+    plt.show()
 
-plt.hist(vb_results['alpha'], showfliers=False, showmeans=True)
-plt.show()
+    plt.hist(vb_results['alpha'], showfliers=False, showmeans=True)
+    plt.show()
 
 # Fit STAN model (NUTS)
 # The link below describes the tuning parameters:

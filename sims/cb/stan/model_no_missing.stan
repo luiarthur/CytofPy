@@ -27,8 +27,8 @@ parameters {
 }
 
 transformed parameters {
-  vector<upper=0>[L0] mu0 = -cumulative_sum(delta0);
-  vector<lower=0>[L1] mu1 = cumulative_sum(delta1);
+  vector[L0] mu0 = -cumulative_sum(delta0);
+  vector[L1] mu1 = cumulative_sum(delta1);
 }
 
 model {
@@ -51,8 +51,8 @@ model {
 
   // Model
   for (n in 1:N) {
-    real lmix1;
     real lmix0;
+    real lmix1;
     vector[L0] kernel0;
     vector[L1] kernel1;
     int i = group[n];
