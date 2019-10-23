@@ -36,5 +36,5 @@ model_data = dict(
 # Fit STAN model
 # The link below describes the tuning parameters:
 # https://mc-stan.org/docs/2_20/reference-manual/hmc-algorithm-parameters.html
-fit = sm.sampling(data=model_data, iter=200, chains=1, seed=1, warmup=30,
-                  control=dict(max_treedepth=4))
+fit = sm.sampling(data=model_data, iter=200, chains=1, seed=1, warmup=100,
+                  control=dict(max_treedepth=5))
