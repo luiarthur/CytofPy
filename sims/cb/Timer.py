@@ -7,8 +7,9 @@ class Timer(object):
         time.sleep(2)
         x = 1
     """
-    def __init__(self, name=None):
+    def __init__(self, name=None, ndigits=None):
         self.name = name
+        self.ndigits = ndigits
 
     def __enter__(self):
         self.tstart = time.time()
@@ -18,5 +19,5 @@ class Timer(object):
             print(self.name, end=' ')
 
         elapsed = time.time() - self.tstart
-        print('time: {}s'.format(round(elapsed)))
+        print('time: {}s'.format(round(elapsed, self.ndigits)))
 
