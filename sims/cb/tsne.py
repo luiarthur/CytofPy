@@ -67,14 +67,14 @@ if __name__ == '__main__':
     # plt.scatter(pca.components_[2, :], pca.components_[1, :])
     # plt.show()
 
-    n_subsample = 5000
+    n_subsample = 500
     idx_subsample = np.random.choice(Y_scaled.shape[0], n_subsample, replace=False)
     # idx_subsample = np.random.choice(y[0].shape[0], n_subsample, replace=False)
 
     # idx_subsample = np.arange(Y_scaled.shape[0])  # All CB samples
 
     # tsne = TSNE(verbose=1, method='exact', random_state=0)
-    tsne = TSNE(verbose=1)
+    tsne = TSNE(verbose=1, n_iter=3000)
     with Timer.Timer(ndigits=2):
         tsne.fit(Y_scaled[idx_subsample])
 
@@ -84,36 +84,36 @@ if __name__ == '__main__':
     plt.show()
     plt.close()
 
-    # Processing times for exact method (seconds)
-    proc_time_exact = {100: 1.44,
-                       200: 3.17,
-                       300: 8.24,
-                       400: 12.53,
-                       500: 16.32,
-                       1000: 45.41,
-                       5000: 902.99} # 4 cores,
-                       # 10000: None,
-                       # 50000: None}
-                       # 5000: 1086.99} # 32 cores,
+    # # Processing times for exact method (seconds)
+    # proc_time_exact = {100: 1.44,
+    #                    200: 3.17,
+    #                    300: 8.24,
+    #                    400: 12.53,
+    #                    500: 16.32,
+    #                    1000: 45.41,
+    #                    5000: 902.99} # 4 cores,
+    #                    # 10000: None,
+    #                    # 50000: None}
+    #                    # 5000: 1086.99} # 32 cores,
 
-    plt.plot(list(proc_time_exact.keys()),
-             list(proc_time_exact.values()),
-             marker='o'); plt.show()
+    # plt.plot(list(proc_time_exact.keys()),
+    #          list(proc_time_exact.values()),
+    #          marker='o'); plt.show()
 
-    # Processing times (seconds)
-    proc_time = {100: 1,
-                 500: 3,
-                 1000: 7,
-                 1500: 13,
-                 2000: 16,
-                 2500: 18,
-                 3000: 25,
-                 5000: 46,
-                 10000: 92,
-                 20000: 213,
-                 50000: 708,
-                 57105: 820}
+    # # Processing times (seconds)
+    # proc_time = {100: 1,
+    #              500: 3,
+    #              1000: 7,
+    #              1500: 13,
+    #              2000: 16,
+    #              2500: 18,
+    #              3000: 25,
+    #              5000: 46,
+    #              10000: 92,
+    #              20000: 213,
+    #              50000: 708,
+    #              57105: 820}
 
-    plt.plot(list(proc_time.keys()),
-             list(proc_time.values()),
-             marker='o'); plt.show()
+    # plt.plot(list(proc_time.keys()),
+    #          list(proc_time.values()),
+    #          marker='o'); plt.show()
